@@ -6,7 +6,7 @@ defmodule Phoenix.DataView.Tracked.DiffTest do
 
   use Phoenix.DataView.Tracked
 
-  deft render5(assigns) do
+  deft render(assigns) do
     %{
       categories:
         for category <- assigns.categories do
@@ -14,7 +14,7 @@ defmodule Phoenix.DataView.Tracked.DiffTest do
             %{
               posts:
                 for post <- category.posts do
-                  keyed(post.id, track(render5_post(post)))
+                  keyed(post.id, track(render_post(post)))
                 end
             }
           end
@@ -22,7 +22,7 @@ defmodule Phoenix.DataView.Tracked.DiffTest do
     }
   end
 
-  deft render5_post(post) do
+  deft render_post(post) do
     %{
       title: post.title,
       text: post.text
@@ -118,7 +118,7 @@ defmodule Phoenix.DataView.Tracked.DiffTest do
 
   test "foobar" do
     state = %{ids: %{}, visited: %{}, counter: 0}
-    %{ids: keyed_ids} = __tracked_ids_render5_1__(state)
+    %{ids: keyed_ids} = __tracked_ids_render_1__(state)
 
     assigns = %{
       categories: [
@@ -137,7 +137,7 @@ defmodule Phoenix.DataView.Tracked.DiffTest do
 
     apply_state = Apply.new()
 
-    rendered = __tracked_render5__(assigns)
+    rendered = __tracked_render__(assigns)
     {ops1, state} = Diff.render_initial(rendered, keyed_ids)
 
     IO.inspect(ops1)
@@ -164,7 +164,7 @@ defmodule Phoenix.DataView.Tracked.DiffTest do
       ]
     }
 
-    rendered = __tracked_render5__(assigns)
+    rendered = __tracked_render__(assigns)
     {ops2, state} = Diff.render_diff(rendered, state)
 
     IO.inspect(ops2)

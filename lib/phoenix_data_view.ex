@@ -9,7 +9,7 @@ defmodule Phoenix.DataView do
 
   @callback mount(params :: any(), Socket.t()) :: {:ok, Socket.t()}
 
-  @callback __tracked_render__(Tracked.state(), Socket.assigns()) :: Tracked.state()
+  @callback __tracked_render__(Socket.assigns()) :: Tracked.tree()
   @callback render(Socket.assigns()) :: rendered()
 
   @optional_callbacks mount: 2

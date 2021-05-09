@@ -6,13 +6,15 @@ defmodule Phoenix.DataView.Channel do
 
   alias Phoenix.Socket.Message
   alias Phoenix.DataView.Socket
+  alias Phoenix.DataView.Tracked.Diff
 
   @prefix :phoenix
 
   defstruct socket: nil,
             view: nil,
             topic: nil,
-            serializer: nil
+    serializer: nil,
+    tracked_state: nil
 
   def start_link({endpoint, from}) do
     IO.inspect({endpoint, from})
@@ -101,9 +103,24 @@ defmodule Phoenix.DataView.Channel do
     {:noreply, state}
   end
 
-  defp render_view(state) do
-    rendered = state.view.render(state.socket.assigns)
-    push(state, "f", rendered)
+  defp render_view(%{tracked_state: nil} = state) do
+    tree = state.view.__tracked_render__(state.socket.assigns)
+
+    ids_state = %{ids: %{}, visited: %{}, counter: 0}
+    %{ids: keyed_ids} = state.view.__tracked_ids_render_1__(ids_state)
+
+    {ops, tracked_state} = Diff.render_initial(tree, keyed_ids)
+    state = %{state | tracked_state: tracked_state}
+
+    push(state, "o", %{"o" => ops})
+  end
+  defp render_view(%{tracked_state: tracked_state} = state) do
+    tree = state.view.__tracked_render__(state.socket.assigns)
+
+    {ops, tracked_state} = Diff.render_diff(tree, tracked_state)
+    state = %{state | tracked_state: tracked_state}
+
+    push(state, "o", %{"o" => ops})
   end
 
   defp maybe_call_data_view_mount!(state, params) do

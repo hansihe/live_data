@@ -1,13 +1,19 @@
 defmodule Phoenix.DataView.Tracked.Dummy do
   defmacro track(call) do
-    call
+    quote do
+      unquote(__MODULE__).track_stub(unquote(call))
+    end
   end
 
-  defmacro keyed(_key, do: body) do
-    body
+  defmacro keyed(key, do: body) do
+    quote do
+      unquote(__MODULE__).keyed_stub(unquote(key), unquote(body))
+    end
   end
 
-  defmacro keyed(_key, expr) do
-    expr
+  defmacro keyed(key, expr) do
+    quote do
+      unquote(__MODULE__).keyed_stub(unquote(key), unquote(expr))
+    end
   end
 end

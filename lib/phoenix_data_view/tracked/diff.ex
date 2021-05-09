@@ -54,14 +54,14 @@ defmodule Phoenix.DataView.Tracked.Diff do
       Enum.map(active, fn {ref, nil} ->
         ref_alias = Map.fetch!(state.aliases, ref)
         fragment = state.scopes[ref.id].values[ref.key].value
-        {@op_set_fragment, ref_alias, escape_fragment(fragment, state)}
+        [@op_set_fragment, ref_alias, escape_fragment(fragment, state)]
       end)
 
     ops =
       fragment_set_ops ++
         [
-          {@op_set_root, Map.fetch!(state.aliases, root)},
-          {@op_render}
+          [@op_set_root, Map.fetch!(state.aliases, root)],
+          [@op_render]
         ]
 
     {ops, state}
@@ -89,7 +89,7 @@ defmodule Phoenix.DataView.Tracked.Diff do
         data = state.scopes[ref.id].values[ref.key]
 
         if data.changed_generation == state.generation do
-          {@op_set_fragment, ref_alias, escape_fragment(data.value, state)}
+          [@op_set_fragment, ref_alias, escape_fragment(data.value, state)]
         else
           nil
         end
@@ -101,7 +101,7 @@ defmodule Phoenix.DataView.Tracked.Diff do
     ops =
       fragment_set_ops ++
         [
-          {@op_render}
+          [@op_render]
         ]
 
     {ops, state}
@@ -117,7 +117,7 @@ defmodule Phoenix.DataView.Tracked.Diff do
   end
 
   def escape_fragment(%Tracked.Ref{} = ref, state) do
-    {"$r", Map.fetch!(state.aliases, ref)}
+    ["$r", Map.fetch!(state.aliases, ref)]
   end
 
   def escape_fragment(%_{}, _state) do
@@ -138,8 +138,8 @@ defmodule Phoenix.DataView.Tracked.Diff do
 
   def escape_fragment(atom, _mapper) when is_atom(atom), do: atom
   def escape_fragment(number, _mapper) when is_number(number), do: number
-  def escape_fragment("$e", _mapper), do: {"$e", "$e"}
-  def escape_fragment("$r", _mapper), do: {"$e", "$r"}
+  def escape_fragment("$e", _mapper), do: ["$e", "$e"]
+  def escape_fragment("$r", _mapper), do: ["$e", "$r"]
   def escape_fragment(binary, _mapper) when is_binary(binary), do: binary
 
   def assign_aliases(active, state) do
