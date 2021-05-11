@@ -7,6 +7,7 @@ defmodule Phoenix.DataView.Channel do
   alias Phoenix.Socket.Message
   alias Phoenix.DataView.Socket
   alias Phoenix.DataView.Tracked.Diff
+  alias Phoenix.DataView.Tracked.Render
 
   @prefix :phoenix
 
@@ -109,7 +110,7 @@ defmodule Phoenix.DataView.Channel do
     ids_state = %{ids: %{}, visited: %{}, counter: 0}
     %{ids: keyed_ids} = state.view.__tracked_ids_render_1__(ids_state)
 
-    {ops, tracked_state} = Diff.render_initial(tree, keyed_ids)
+    {ops, tracked_state} = Render.render_initial(tree, keyed_ids)
     state = %{state | tracked_state: tracked_state}
 
     push(state, "o", %{"o" => ops})
@@ -117,7 +118,7 @@ defmodule Phoenix.DataView.Channel do
   defp render_view(%{tracked_state: tracked_state} = state) do
     tree = state.view.__tracked_render__(state.socket.assigns)
 
-    {ops, tracked_state} = Diff.render_diff(tree, tracked_state)
+    {ops, tracked_state} = Render.render_diff(tree, tracked_state)
     state = %{state | tracked_state: tracked_state}
 
     push(state, "o", %{"o" => ops})

@@ -1,7 +1,7 @@
-defmodule Phoenix.DataView.Tracked.DiffTest do
+defmodule Phoenix.DataView.Tracked.TreeTest do
   use ExUnit.Case
 
-  alias Phoenix.DataView.Tracked.Diff
+  alias Phoenix.DataView.Tracked.Render
   alias Phoenix.DataView.Tracked.Apply
 
   use Phoenix.DataView.Tracked
@@ -27,6 +27,22 @@ defmodule Phoenix.DataView.Tracked.DiffTest do
       title: post.title,
       text: post.text
     }
+  end
+
+  use FlutterView
+
+  deft flutter_view_test() do
+    scaffold(
+      app_bar: app_bar(
+        title: text("hello world")
+      ),
+      body: list_view(
+        children: [],
+      ),
+      floating_action_button: floating_action_button(
+        on_pressed_event: "add_post"
+      ),
+    )
   end
 
   # def proto__track_render2__(:make_ids, state) do
@@ -138,7 +154,7 @@ defmodule Phoenix.DataView.Tracked.DiffTest do
     apply_state = Apply.new()
 
     rendered = __tracked_render__(assigns)
-    {ops1, state} = Diff.render_initial(rendered, keyed_ids)
+    {ops1, state} = Render.render_initial(rendered, keyed_ids)
 
     IO.inspect(ops1)
     apply_state = Apply.apply(ops1, apply_state)
@@ -165,7 +181,7 @@ defmodule Phoenix.DataView.Tracked.DiffTest do
     }
 
     rendered = __tracked_render__(assigns)
-    {ops2, state} = Diff.render_diff(rendered, state)
+    {ops2, state} = Render.render_diff(rendered, state)
 
     IO.inspect(ops2)
     apply_state = Apply.apply(ops2, apply_state)

@@ -255,7 +255,7 @@ defmodule Phoenix.DataView.Tracked.Compiler do
       |> Enum.map(fn {name, ctx} -> {name, [], ctx} end)
 
     quote do
-      %Phoenix.DataView.Tracked.Keyed{
+      %Phoenix.DataView.Tracked.Tree.Keyed{
         id: {unquote(context_var), unquote(fragment_var)},
         key: unquote(key),
         escapes: unquote(active_vars_expr),
