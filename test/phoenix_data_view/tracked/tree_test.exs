@@ -3,6 +3,8 @@ defmodule Phoenix.DataView.Tracked.TreeTest do
 
   alias Phoenix.DataView.Tracked.Render
   alias Phoenix.DataView.Tracked.Apply
+  alias Phoenix.DataView.Tracked.Diff
+  alias Phoenix.DataView.Tracked.Tree
 
   use Phoenix.DataView.Tracked
 
@@ -31,19 +33,19 @@ defmodule Phoenix.DataView.Tracked.TreeTest do
 
   use FlutterView
 
-  deft flutter_view_test() do
-    scaffold(
-      app_bar: app_bar(
-        title: text("hello world")
-      ),
-      body: list_view(
-        children: [],
-      ),
-      floating_action_button: floating_action_button(
-        on_pressed_event: "add_post"
-      ),
-    )
-  end
+  #deft flutter_view_test() do
+  #  scaffold(
+  #    app_bar: app_bar(
+  #      title: text("hello world")
+  #    ),
+  #    body: list_view(
+  #      children: [],
+  #    ),
+  #    floating_action_button: floating_action_button(
+  #      on_pressed_event: "add_post"
+  #    ),
+  #  )
+  #end
 
   # def proto__track_render2__(:make_ids, state) do
   #  scope_id = {__MODULE__, :render2, 1}
@@ -132,59 +134,60 @@ defmodule Phoenix.DataView.Tracked.TreeTest do
   #  }
   # end
 
-  test "foobar" do
-    state = %{ids: %{}, visited: %{}, counter: 0}
-    %{ids: keyed_ids} = __tracked_ids_render_1__(state)
+  #test "foobar" do
+  #  state = %{ids: %{}, visited: %{}, counter: 0}
+  #  %{ids: keyed_ids} = __tracked_ids_render_1__(state)
 
-    assigns = %{
-      categories: [
-        %{
-          id: 0,
-          posts: [
-            %{
-              id: 0,
-              title: "woo",
-              text: "hoo"
-            }
-          ]
-        }
-      ]
-    }
+  #  assigns = %{
+  #    categories: [
+  #      %{
+  #        id: 0,
+  #        posts: [
+  #          %{
+  #            id: 0,
+  #            title: "woo",
+  #            text: "hoo"
+  #          }
+  #        ]
+  #      }
+  #    ]
+  #  }
 
-    apply_state = Apply.new()
+  #  tree_state = Tree.new(keyed_ids)
+  #  apply_state = Apply.new()
 
-    rendered = __tracked_render__(assigns)
-    {ops1, state} = Render.render_initial(rendered, keyed_ids)
+  #  rendered = __tracked_render__(assigns)
+  #  {ops1, tree_state} = Tree.render(rendered, tree_state)
 
-    IO.inspect(ops1)
-    apply_state = Apply.apply(ops1, apply_state)
-    IO.inspect(apply_state.rendered)
+  #  IO.inspect(ops1)
+  #  apply_state = Apply.apply(ops1, apply_state)
+  #  IO.inspect(apply_state.rendered)
 
-    assigns = %{
-      categories: [
-        %{
-          id: 0,
-          posts: [
-            %{
-              id: 0,
-              title: "woo",
-              text: "hoo"
-            },
-            %{
-              id: 1,
-              title: "foobar",
-              text: "foo"
-            }
-          ]
-        }
-      ]
-    }
+  #  assigns = %{
+  #    categories: [
+  #      %{
+  #        id: 0,
+  #        posts: [
+  #          %{
+  #            id: 0,
+  #            title: "woo",
+  #            text: "hoo"
+  #          },
+  #          %{
+  #            id: 1,
+  #            title: "foobar",
+  #            text: "foo"
+  #          }
+  #        ]
+  #      }
+  #    ]
+  #  }
 
-    rendered = __tracked_render__(assigns)
-    {ops2, state} = Render.render_diff(rendered, state)
+  #  rendered = __tracked_render__(assigns)
+  #  {ops2, tree_state} = Tree.render(rendered, tree_state)
 
-    IO.inspect(ops2)
-    apply_state = Apply.apply(ops2, apply_state)
-    IO.inspect(apply_state.rendered)
-  end
+  #  IO.inspect(ops2)
+  #  apply_state = Apply.apply(ops2, apply_state)
+  #  IO.inspect(apply_state.rendered)
+  #end
 end

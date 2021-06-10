@@ -52,16 +52,16 @@ defmodule Phoenix.DataView.Tracked.Render do
 
     fragment_set_ops =
       Enum.map(active, fn {ref, nil} ->
-        ref_alias = Map.fetch!(state.aliases, ref)
+        #ref_alias = Map.fetch!(state.aliases, ref)
         fragment = state.scopes[ref.id].values[ref.key].value
-        [@op_set_fragment, ref_alias, escape_fragment(fragment, state)]
+        {@op_set_fragment, ref, fragment}
       end)
 
     ops =
       fragment_set_ops ++
         [
-          [@op_set_root, Map.fetch!(state.aliases, root)],
-          [@op_render]
+          {@op_set_root, root},
+          {@op_render}
         ]
 
     {ops, state}
@@ -85,11 +85,11 @@ defmodule Phoenix.DataView.Tracked.Render do
     fragment_set_ops =
       active
       |> Enum.map(fn {ref, nil} ->
-        ref_alias = Map.fetch!(state.aliases, ref)
+        #ref_alias = Map.fetch!(state.aliases, ref)
         data = state.scopes[ref.id].values[ref.key]
 
         if data.changed_generation == state.generation do
-          [@op_set_fragment, ref_alias, escape_fragment(data.value, state)]
+          {@op_set_fragment, ref, data.value}
         else
           nil
         end
@@ -101,10 +101,14 @@ defmodule Phoenix.DataView.Tracked.Render do
     ops =
       fragment_set_ops ++
         [
-          [@op_render]
+          {@op_render}
         ]
 
     {ops, state}
+  end
+
+  def get_alias(state, ref) do
+    Map.fetch!(state.aliases, ref)
   end
 
   def add_root_key(tree) do
@@ -115,32 +119,6 @@ defmodule Phoenix.DataView.Tracked.Render do
       render: fn -> tree end
     }
   end
-
-  def escape_fragment(%Tree.Ref{} = ref, state) do
-    ["$r", Map.fetch!(state.aliases, ref)]
-  end
-
-  def escape_fragment(%_{}, _state) do
-    raise "unreachable"
-  end
-
-  def escape_fragment(%{} = map, state) do
-    map
-    |> Enum.map(fn {k, v} ->
-      {k, escape_fragment(v, state)}
-    end)
-    |> Enum.into(%{})
-  end
-
-  def escape_fragment(list, state) when is_list(list) do
-    Enum.map(list, fn value -> escape_fragment(value, state) end)
-  end
-
-  def escape_fragment(atom, _mapper) when is_atom(atom), do: atom
-  def escape_fragment(number, _mapper) when is_number(number), do: number
-  def escape_fragment("$e", _mapper), do: ["$e", "$e"]
-  def escape_fragment("$r", _mapper), do: ["$e", "$r"]
-  def escape_fragment(binary, _mapper) when is_binary(binary), do: binary
 
   def assign_aliases(active, state) do
     Enum.reduce(active, state, fn {ref, nil}, state ->

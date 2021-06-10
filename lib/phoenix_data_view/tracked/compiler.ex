@@ -1,16 +1,112 @@
 defmodule Phoenix.DataView.Tracked.Compiler do
+  alias Phoenix.DataView.Tracked.Compiler
+  alias Phoenix.DataView.Tracked.Compiler2
   alias Phoenix.DataView.Tracked.Dummy
+  alias Phoenix.DataView.Tracked.FlatAst
+  alias Phoenix.DataView.Tracked.Util
 
   def compile(module, {name, arity} = fun, kind, meta, clauses) do
     ids_fun_name = String.to_atom("__tracked_ids_#{name}_#{arity}__")
     tracked_fun_name = String.to_atom("__tracked_#{name}__")
 
-    {clauses, ids_state} = assign_fragment_ids(module, clauses)
+    {:ok, ast} = FlatAst.FromAst.from_clauses(clauses)
+    ast = FlatAst.Pass.Normalize.normalize(ast)
+
+    nesting = FlatAst.Pass.CalculateNesting.calculate_nesting(ast)
+
+    # TODO we might not want to do it this way
+    nesting_set =
+      nesting
+      |> Enum.map(fn {expr, path} ->
+        Enum.map(path, &{&1, expr})
+      end)
+      |> Enum.concat()
+      |> Enum.into(MapSet.new())
+
+    #expr = FlatAst.ToAst.to_expr(ast, pretty: true)
+    #tracked_defs = Util.fn_to_defs(expr, tracked_fun_name)
+    #IO.puts Macro.to_string(tracked_defs)
+
+    {:ok, new_ast} = FlatAst.Pass.RewriteAst.rewrite(ast, nesting_set)
+    #IO.inspect new_ast
+
+    expr = FlatAst.ToAst.to_expr(new_ast, pretty: true)
+    #tracked_defs = Util.fn_to_defs(expr, tracked_fun_name)
+    #IO.puts Macro.to_string(tracked_defs)
+
+    tracked_defs = Util.fn_to_defs(expr, tracked_fun_name)
+
+
+    ### true = false
+
+    ### uses_count = FlatAst.Pass.CountUses.count_uses(ast)
+    ### IO.inspect uses_count
+
+    ### expr = FlatAst.ToAst.to_expr(ast, pretty: true)
+    ### tracked_defs = Util.fn_to_defs(expr, tracked_fun_name)
+    ### IO.puts Macro.to_string(tracked_defs)
+
+    ### FlatAst.Pass.RewriteAst.rewrite(ast)
+
+    ### true = false
+
+    ### scopes = FlatAst.Pass.IdentifyScopes.identify_scopes(ast)
+    ### {ast, statics} = FlatAst.Pass.ExtractStatic.extract_static(ast, uses_count, scopes)
+
+    ### expr = FlatAst.ToAst.to_expr(ast, pretty: true)
+    ### tracked_defs = Util.fn_to_defs(expr, tracked_fun_name)
+    ### #IO.inspect tracked_defs
+    ### IO.puts Macro.to_string(tracked_defs)
+
+    ### true = false
+
+    ### expr = FlatAst.ToAst.to_expr(ast)
+
+
+    ### tracked_defs = Util.fn_to_defs(expr, tracked_fun_name)
+    ### IO.inspect tracked_defs
+    ### IO.puts Macro.to_string(tracked_defs)
+
+    # true = false
+
+    # {:ok, ir} = Compiler2.FromAst.from_clauses(clauses)
+    # Compiler2.ToAst.to_ast(ir)
+
+    # true = false
+
+    # clauses = Compiler.AssignNodeIds.assign_node_ids(clauses)
+    # dataflow = Compiler.FromAst.from_clauses(clauses)
+
+    # {statics, dataflow} = Compiler.ExtractStatic.extract_static(dataflow)
+
+    # aux =
+    #   dataflow
+    #   |> Compiler.Auxiliary.new()
+    #   |> Compiler.Auxiliary.calc_reverse()
+    #   |> Compiler.Auxiliary.calc_depsets()
+
+    # IO.inspect Compiler.Synthesize.synthesize(aux)
+
+    # keyed_ids =
+    #   dataflow.equations
+    #   |> Enum.filter(fn
+    #     {_id, {:call, _opts, {Phoenix.DataView.Tracked.Dummy, :keyed_stub}, _}} ->
+    #       true
+
+    #     _ ->
+    #       false
+    #   end)
+    #   |> Enum.map(fn {id, _val} -> id end)
+
+    # Enum.map(keyed_ids, &Compiler.DataAccess.data_access_for(dataflow, {:comp, &1}))
+
+    # {clauses, ids_state} = assign_fragment_ids(module, clauses)
 
     [
       make_normal_fun(kind, fun, clauses),
-      make_ids_fun(module, kind, ids_fun_name, fun, ids_state),
-      make_tracked_fun(module, kind, tracked_fun_name, fun, clauses)
+      tracked_defs
+      #make_ids_fun(module, kind, ids_fun_name, fun, ids_state),
+      #make_tracked_fun(module, kind, tracked_fun_name, fun, clauses)
     ]
   end
 
