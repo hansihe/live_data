@@ -6,8 +6,8 @@ defmodule Phoenix.DataView.Tracked.Compiler do
   alias Phoenix.DataView.Tracked.Util
 
   def compile(module, {name, arity} = fun, kind, meta, clauses) do
-    ids_fun_name = String.to_atom("__tracked_ids_#{name}_#{arity}__")
-    tracked_fun_name = String.to_atom("__tracked_#{name}__")
+    meta_fun_name = String.to_atom("__tracked_meta__#{name}__#{arity}__")
+    tracked_fun_name = String.to_atom("__tracked__#{name}__")
 
     {:ok, ast} = FlatAst.FromAst.from_clauses(clauses)
     ast = FlatAst.Pass.Normalize.normalize(ast)
@@ -15,6 +15,8 @@ defmodule Phoenix.DataView.Tracked.Compiler do
     nesting = FlatAst.Pass.CalculateNesting.calculate_nesting(ast)
 
     # TODO we might not want to do it this way
+    # This generates m*n entries where m is the number of expressions and n
+    # is the nesting level.
     nesting_set =
       nesting
       |> Enum.map(fn {expr, path} ->
@@ -23,90 +25,20 @@ defmodule Phoenix.DataView.Tracked.Compiler do
       |> Enum.concat()
       |> Enum.into(MapSet.new())
 
-    #expr = FlatAst.ToAst.to_expr(ast, pretty: true)
-    #tracked_defs = Util.fn_to_defs(expr, tracked_fun_name)
-    #IO.puts Macro.to_string(tracked_defs)
+    {:ok, new_ast, statics} = FlatAst.Pass.RewriteAst.rewrite(ast, nesting_set)
 
-    {:ok, new_ast} = FlatAst.Pass.RewriteAst.rewrite(ast, nesting_set)
-    #IO.inspect new_ast
-
-    expr = FlatAst.ToAst.to_expr(new_ast, pretty: true)
-    #tracked_defs = Util.fn_to_defs(expr, tracked_fun_name)
-    #IO.puts Macro.to_string(tracked_defs)
-
+    expr = FlatAst.ToAst.to_expr(new_ast)
     tracked_defs = Util.fn_to_defs(expr, tracked_fun_name)
 
-
-    ### true = false
-
-    ### uses_count = FlatAst.Pass.CountUses.count_uses(ast)
-    ### IO.inspect uses_count
-
-    ### expr = FlatAst.ToAst.to_expr(ast, pretty: true)
-    ### tracked_defs = Util.fn_to_defs(expr, tracked_fun_name)
-    ### IO.puts Macro.to_string(tracked_defs)
-
-    ### FlatAst.Pass.RewriteAst.rewrite(ast)
-
-    ### true = false
-
-    ### scopes = FlatAst.Pass.IdentifyScopes.identify_scopes(ast)
-    ### {ast, statics} = FlatAst.Pass.ExtractStatic.extract_static(ast, uses_count, scopes)
-
-    ### expr = FlatAst.ToAst.to_expr(ast, pretty: true)
-    ### tracked_defs = Util.fn_to_defs(expr, tracked_fun_name)
-    ### #IO.inspect tracked_defs
-    ### IO.puts Macro.to_string(tracked_defs)
-
-    ### true = false
-
-    ### expr = FlatAst.ToAst.to_expr(ast)
-
-
-    ### tracked_defs = Util.fn_to_defs(expr, tracked_fun_name)
-    ### IO.inspect tracked_defs
-    ### IO.puts Macro.to_string(tracked_defs)
-
-    # true = false
-
-    # {:ok, ir} = Compiler2.FromAst.from_clauses(clauses)
-    # Compiler2.ToAst.to_ast(ir)
-
-    # true = false
-
-    # clauses = Compiler.AssignNodeIds.assign_node_ids(clauses)
-    # dataflow = Compiler.FromAst.from_clauses(clauses)
-
-    # {statics, dataflow} = Compiler.ExtractStatic.extract_static(dataflow)
-
-    # aux =
-    #   dataflow
-    #   |> Compiler.Auxiliary.new()
-    #   |> Compiler.Auxiliary.calc_reverse()
-    #   |> Compiler.Auxiliary.calc_depsets()
-
-    # IO.inspect Compiler.Synthesize.synthesize(aux)
-
-    # keyed_ids =
-    #   dataflow.equations
-    #   |> Enum.filter(fn
-    #     {_id, {:call, _opts, {Phoenix.DataView.Tracked.Dummy, :keyed_stub}, _}} ->
-    #       true
-
-    #     _ ->
-    #       false
-    #   end)
-    #   |> Enum.map(fn {id, _val} -> id end)
-
-    # Enum.map(keyed_ids, &Compiler.DataAccess.data_access_for(dataflow, {:comp, &1}))
-
-    # {clauses, ids_state} = assign_fragment_ids(module, clauses)
+    meta_fun_ast =
+      quote do
+        def unquote(meta_fun_name)(:statics), do: unquote(Macro.escape(statics))
+      end
 
     [
       make_normal_fun(kind, fun, clauses),
-      tracked_defs
-      #make_ids_fun(module, kind, ids_fun_name, fun, ids_state),
-      #make_tracked_fun(module, kind, tracked_fun_name, fun, clauses)
+      tracked_defs,
+      meta_fun_ast,
     ]
   end
 
@@ -188,116 +120,6 @@ defmodule Phoenix.DataView.Tracked.Compiler do
         end
       end
     end
-  end
-
-
-  # Tracked function
-
-  def make_tracked_fun(module, kind, name, {orig_name, orig_arity}, clauses) do
-    clauses = rewrite_ast_tracked(module, orig_name, orig_arity, clauses)
-
-    clauses
-    |> Enum.map(fn {opts, args, [], body} ->
-      inner = [
-        {name, opts, args},
-        [
-          do: body
-        ]
-      ]
-      {kind, opts, inner}
-    end)
-  end
-
-  def rewrite_ast_tracked(module, name, arity, clauses) do
-    post = fn node, nil ->
-      case Macro.decompose_call(node) do
-        {Dummy, :keyed_stub, args} ->
-          {_, opts, _} = node
-          fragment_id = Keyword.fetch!(opts, :tracked_id)
-
-          block =
-            quote do
-              unquote(fragment_var()) = unquote(fragment_id)
-              unquote(__MODULE__).keyed_stub(unquote_splicing(args))
-            end
-
-          {block, nil}
-
-        {Dummy, :track_stub, args} ->
-          block =
-            quote do
-              unquote(__MODULE__).track_stub(unquote_splicing(args))
-            end
-
-          {block, nil}
-
-        _ ->
-          {node, nil}
-      end
-    end
-
-    {clauses, nil} = traverse_clauses(clauses, nil, &traverse_identity/2, post)
-
-    for {opts, args, [], body} <- clauses do
-      body =
-      quote do
-        require(unquote(__MODULE__))
-        unquote(context_var) = {unquote(module), unquote(name), unquote(arity)}
-        unquote(body)
-      end
-
-      {opts, args, [], body}
-    end
-  end
-
-  # Assign fragment IDs prepass
-
-  def assign_fragment_ids(module, clauses) do
-    state = %{
-      fragment_lines: %{},
-      tracked_calls: [],
-      counter: 0
-    }
-
-    pre = fn node, state ->
-      case Macro.decompose_call(node) do
-        {Dummy, :keyed_stub, args} ->
-          {target, opts, args} = node
-          line = Keyword.get(opts, :line)
-
-          node = {target, [{:tracked_id, state.counter} | opts], args}
-
-          state = %{
-            state
-            | fragment_lines: Map.put(state.fragment_lines, state.counter, line),
-              counter: state.counter + 1
-          }
-
-          {node, state}
-
-        {Dummy, :track_stub, args} ->
-          [call] = args
-
-          case Macro.decompose_call(call) do
-            {module, name, args} ->
-              args_count = Enum.count(args)
-              state = %{state | tracked_calls: [{module, name, args_count} | state.tracked_calls]}
-              {node, state}
-
-            {name, args} ->
-              args_count = Enum.count(args)
-              state = %{state | tracked_calls: [{module, name, args_count} | state.tracked_calls]}
-              {node, state}
-          end
-
-        _ ->
-          {node, state}
-      end
-    end
-
-    {clauses, state} = traverse_clauses(clauses, state, pre, &traverse_identity/2)
-
-    {clauses, state}
   end
 
   # Terminal macros

@@ -8,6 +8,8 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
   alias Phoenix.DataView.Tracked.FlatAst.Util
 
   def rewrite(ast, nesting_set) do
+    IO.inspect ast
+
     scopes =
       FlatAst.Util.traverse(ast, ast.root, %{}, fn
         id, %Expr.Scope{exprs: exprs}, scopes ->
@@ -24,8 +26,8 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
 
     fn_expr = %Expr.Fn{} = FlatAst.get(ast, ast.root)
 
-    new_clauses =
-      Enum.map(fn_expr.clauses, fn {patterns, binds, guard, body} ->
+    {new_clauses, statics} =
+      Enum.map_reduce(fn_expr.clauses, %{}, fn {patterns, binds, guard, body}, statics_acc ->
         new_guard =
           if guard do
             true = false
@@ -63,7 +65,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
         transcribed = %{ast.root => new_root}
         {new_body, _transcribed} = rewrite_scope(body, data, rewritten, transcribed, out)
 
-        {patterns, binds, new_guard, new_body}
+        {{patterns, binds, new_guard, new_body}, Map.merge(statics_acc, statics)}
       end)
 
     new_expr = %{fn_expr | clauses: new_clauses}
@@ -74,7 +76,16 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
     # TODO?
     new_ast = %{new_ast | patterns: ast.patterns}
 
-    {:ok, new_ast}
+    statics =
+      statics
+      |> Enum.map(fn
+        {id, {:finished, structure, _slots, _key}} -> {id, structure}
+        _ -> nil
+      end)
+      |> Enum.filter(&(&1 != nil))
+      |> Enum.into(%{})
+
+    {:ok, new_ast, statics}
   end
 
   @doc """
@@ -93,10 +104,9 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
       :ok = state_static_add(state, expr_id)
       static_structure = rewrite_make_structure_rec(expr_id, ast, expr_id, state)
 
-      case static_structure do
-        {:slot, 0} ->
-          {:ok, {:unfinished, _nid, [slot_zero_expr], _key}} = state_static_fetch(state, expr_id)
-
+      {:ok, static_result} = state_static_fetch(state, expr_id)
+      case {static_structure, static_result} do
+        {{:slot, 0}, {:unfinished, _nid, [slot_zero_expr], nil}} ->
           case state_static_fetch(state, slot_zero_expr) do
             {:ok, {:finished, _static, _slots, _key} = val} ->
               :ok = state_static_set(state, expr_id, val)
@@ -104,7 +114,6 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
             _ ->
               slot_zero_expr
           end
-
 
         _ ->
           :ok = state_static_finalize(state, expr_id, static_structure)
@@ -149,6 +158,8 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
         rewrite_make_structure_rec(value_expr, ast, static_id, state)
 
       {{:literal, Phoenix.DataView.Tracked.Dummy}, {:literal, :track_stub}} ->
+        # TODO transform call
+
         [call_expr_id] = expr.args
         call_expr = %Expr.CallMF{} = FlatAst.get(ast, call_expr_id)
 
@@ -550,6 +561,17 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
   def transcribe_pattern(pat_id, data, map, out) do
 
   end
+
+  #def transcribe(expr_id, data, map, backup_resolve, out) do
+  #  false = Map.has_key?(map, expr_id)
+  #  expr = FlatAst.get(data.ast, expr_id)
+
+  #  {new_expr, map} = Util.transform_expr(expr, map, fn
+  #    :value, _selector, expr, map ->
+  #      new_var = Map.fetch!(map, expr)
+  #      {new_var, map}
+  #  end)
+  #end
 
   def transcribe(expr_id, data, map, backup_resolve, out) do
     IO.inspect(expr_id, label: :transcribing)

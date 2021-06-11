@@ -35,4 +35,15 @@ defmodule Phoenix.DataView.Tracked.Dummy do
       unquote(__MODULE__).keyed_stub(unquote(key), unquote(expr))
     end
   end
+
+  @doc false
+  def keyed_stub(_key, _expr) do
+    raise "unreachable"
+  end
+
+  @doc false
+  def track_stub(_inner) do
+    raise "unreachable"
+  end
+
 end

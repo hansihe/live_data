@@ -33,6 +33,34 @@ defmodule Phoenix.DataView.Tracked.TreeTest do
 
   use FlutterView
 
+  test "yay" do
+    assigns = %{
+      categories: [
+        %{
+          id: 0,
+          posts: [
+            %{
+              id: 0,
+              title: "woo",
+              text: "hoo"
+            }
+          ]
+        }
+      ]
+    }
+
+    IO.inspect __tracked_meta__render__1__(:statics)
+
+    out = __tracked__render__(assigns)
+    IO.inspect out
+
+    IO.inspect out.slots.()
+
+    IO.inspect hd(hd(out.slots.())).slots.()
+
+    IO.inspect hd(hd(hd(hd(out.slots.())).slots.())).slots.()
+  end
+
   #deft flutter_view_test() do
   #  scaffold(
   #    app_bar: app_bar(

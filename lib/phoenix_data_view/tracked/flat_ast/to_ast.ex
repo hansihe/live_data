@@ -183,7 +183,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
       quote do
         %Phoenix.DataView.Tracked.Tree.Static{
           id: unquote(expr.static_id),
-          slots: unquote(slots),
+          slots: fn -> unquote(slots) end,
           key: unquote(key)
         }
       end
