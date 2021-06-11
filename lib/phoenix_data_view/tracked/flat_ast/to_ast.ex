@@ -179,10 +179,12 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
         {nil, gen}
       end
 
+    id_expr = Macro.escape({expr.mfa, expr.static_id})
+
     expr =
       quote do
         %Phoenix.DataView.Tracked.Tree.Static{
-          id: unquote(expr.static_id),
+          id: unquote(id_expr),
           slots: fn -> unquote(slots) end,
           key: unquote(key)
         }

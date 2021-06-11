@@ -7,9 +7,9 @@ defmodule Phoenix.DataView.Tracked.Tree do
             render: nil,
             diff: Diff.new()
 
-  def new(ids) do
+  def new() do
     %__MODULE__{
-      ids: ids
+      #ids: ids
     }
   end
 

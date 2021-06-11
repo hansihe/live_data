@@ -68,92 +68,6 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.Normalize do
     {last_expr, block_exprs, ast}
   end
 
-  def flatten_block_rec_inner(%Expr.MakeMap{prev: nil, kvs: kvs}, expr_id, ast) do
-    {new_kvs_m, ast} =
-      Enum.map_reduce(kvs, ast, fn {key, val}, ast ->
-        {new_key, key_exprs, ast} = flatten_block_rec(key, ast)
-        {new_val, val_exprs, ast} = flatten_block_rec(val, ast)
-        {{{new_key, new_val}, [key_exprs, val_exprs]}, ast}
-      end)
-
-    sub_exprs = Enum.map(new_kvs_m, fn {_kv, sub} -> sub end)
-    new_kvs = Enum.map(new_kvs_m, fn {kv, _sub} -> kv  end)
-
-    ast = FlatAst.set_expr(ast, expr_id, Expr.MakeMap.new(nil, new_kvs))
-    {expr_id, [sub_exprs, expr_id], ast}
-  end
-
-  def flatten_block_rec_inner(%Expr.For{} = expr, expr_id, ast) do
-    {items, ast} =
-      Enum.map_reduce(expr.items, ast, fn
-        {:loop, pattern, bindings, body}, ast ->
-          {new_body, ast} = flatten_block(body, ast)
-          {{:loop, pattern, bindings, new_body}, ast}
-
-        {:filter, body}, {acc, ast} ->
-          {new_body, ast} = flatten_block(body, ast)
-          {{:filter, new_body}, ast}
-      end)
-
-    {into, into_exprs, ast} =
-      if expr.into do
-        flatten_block_rec(expr.into, ast)
-      else
-        {nil, [], ast}
-      end
-
-    {inner, ast} = flatten_block(expr.inner, ast)
-
-    ast =
-      FlatAst.set_expr(ast, expr_id, %Expr.For{
-        items: items,
-        into: into,
-        inner: inner
-      })
-
-    {expr_id, [into_exprs, expr_id], ast}
-  end
-
-  def flatten_block_rec_inner(%Expr.AccessField{} = expr, expr_id, ast) do
-    {top, top_exprs, ast} = flatten_block_rec(expr.top, ast)
-
-    ast =
-      FlatAst.set_expr(ast, expr_id, %{
-        expr
-        | top: top
-      })
-
-    {expr_id, [top_exprs, expr_id], ast}
-  end
-
-  def flatten_block_rec_inner(%Expr.CallMF{} = expr, expr_id, ast) do
-    {new_module, module_exprs, ast} =
-      if expr.module do
-        flatten_block_rec(expr.module, ast)
-      else
-        {nil, [], ast}
-      end
-
-    {new_function, function_exprs, ast} = flatten_block_rec(expr.function, ast)
-
-    {new_args_m, ast} =
-      Enum.map_reduce(expr.args, ast, fn arg, ast ->
-        {new_arg, arg_exprs, ast} = flatten_block_rec(arg, ast)
-        {{new_arg, arg_exprs}, ast}
-      end)
-    new_args = Enum.map(new_args_m, fn {arg, _exprs} -> arg end)
-    arg_exprs = Enum.map(new_args_m, fn {_arg, exprs} -> exprs end)
-
-    ast =
-      FlatAst.set_expr(ast, expr_id, %Expr.CallMF{
-        module: new_module,
-        function: new_function,
-        args: new_args
-      })
-
-    {expr_id, [module_exprs, function_exprs, arg_exprs, expr_id], ast}
-  end
-
   def flatten_block_rec_inner(%Expr.Var{} = expr, _expr_id, ast) do
     {expr.ref_expr, [], ast}
   end
@@ -162,22 +76,29 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.Normalize do
     {lit_id, [], ast}
   end
 
-  def add_expr(ast, body) do
-    {id, ast} = FlatAst.add_expr(ast)
-    ast = FlatAst.set_expr(ast, id, body)
-    {id, ast}
-  end
+  def flatten_block_rec_inner(expr, expr_id, ast) do
+    {new_expr, {exprs, ast}} =
+      FlatAst.Util.transform_expr(expr, {[], ast}, fn
+        :value, _selector, sub_expr_id, {acc, ast} ->
+          {val, items, ast} = flatten_block_rec(sub_expr_id, ast)
+          {val, {[acc, items], ast}}
 
-  #def add_assign(ast, body) do
-  #  {{:expr, eid}, ast} = add_expr(ast, %Expr.SimpleAssign{inner: body})
-  #  {{:expr_bind, eid, 0}, {:expr, eid}, ast}
-  #end
+        :scope, _selector, sub_expr_id, {acc, ast} ->
+          {val, ast} = flatten_block(sub_expr_id, ast)
+          {val, {acc, ast}}
 
-  def is_expr_id({:expr, _eid}) do
-    true
-  end
+        :literal, _selector, lit_id, {acc, ast} ->
+          {lit_id, {acc, ast}}
 
-  def is_expr_id(_other) do
-    false
+        :pattern, _selector, pat_id, {acc, ast} ->
+          {pat_id, {acc, ast}}
+
+        :ref, _ref, ref_id, {acc, ast} ->
+          {ref_id, {acc, ast}}
+      end)
+
+    ast = FlatAst.set_expr(ast, expr_id, new_expr)
+
+    {expr_id, [exprs, expr_id], ast}
   end
 end

@@ -162,60 +162,61 @@ defmodule Phoenix.DataView.Tracked.TreeTest do
   #  }
   # end
 
-  #test "foobar" do
-  #  state = %{ids: %{}, visited: %{}, counter: 0}
-  #  %{ids: keyed_ids} = __tracked_ids_render_1__(state)
+  test "foobar" do
+    state = %{ids: %{}, visited: %{}, counter: 0}
+    #%{ids: keyed_ids} = __tracked_ids_render_1__(state)
+    statics = __tracked_meta__render__1__(:statics)
 
-  #  assigns = %{
-  #    categories: [
-  #      %{
-  #        id: 0,
-  #        posts: [
-  #          %{
-  #            id: 0,
-  #            title: "woo",
-  #            text: "hoo"
-  #          }
-  #        ]
-  #      }
-  #    ]
-  #  }
+    assigns = %{
+      categories: [
+        %{
+          id: 0,
+          posts: [
+            %{
+              id: 0,
+              title: "woo",
+              text: "hoo"
+            }
+          ]
+        }
+      ]
+    }
 
-  #  tree_state = Tree.new(keyed_ids)
-  #  apply_state = Apply.new()
+    tree_state = Tree.new() #keyed_ids)
+    apply_state = Apply.new()
 
-  #  rendered = __tracked_render__(assigns)
-  #  {ops1, tree_state} = Tree.render(rendered, tree_state)
+    rendered = __tracked__render__(assigns)
+    {ops1, tree_state} = Tree.render(rendered, tree_state)
 
-  #  IO.inspect(ops1)
-  #  apply_state = Apply.apply(ops1, apply_state)
-  #  IO.inspect(apply_state.rendered)
+    IO.inspect(ops1)
+    apply_state = Apply.apply(ops1, apply_state)
+    IO.inspect(apply_state.rendered)
 
-  #  assigns = %{
-  #    categories: [
-  #      %{
-  #        id: 0,
-  #        posts: [
-  #          %{
-  #            id: 0,
-  #            title: "woo",
-  #            text: "hoo"
-  #          },
-  #          %{
-  #            id: 1,
-  #            title: "foobar",
-  #            text: "foo"
-  #          }
-  #        ]
-  #      }
-  #    ]
-  #  }
+    assigns = %{
+      categories: [
+        %{
+          id: 0,
+          posts: [
+            %{
+              id: 0,
+              title: "woo",
+              text: "hoo"
+            },
+            %{
+              id: 1,
+              title: "foobar",
+              text: "foo"
+            }
+          ]
+        }
+      ]
+    }
 
-  #  rendered = __tracked_render__(assigns)
-  #  {ops2, tree_state} = Tree.render(rendered, tree_state)
+    rendered = __tracked__render__(assigns)
+    {ops2, tree_state} = Tree.render(rendered, tree_state)
 
-  #  IO.inspect(ops2)
-  #  apply_state = Apply.apply(ops2, apply_state)
-  #  IO.inspect(apply_state.rendered)
-  #end
+    IO.inspect(ops2)
+    apply_state = Apply.apply(ops2, apply_state)
+    IO.inspect(apply_state.rendered)
+  end
 end

@@ -6,6 +6,8 @@ defmodule Phoenix.DataView.Tracked.Compiler do
   alias Phoenix.DataView.Tracked.Util
 
   def compile(module, {name, arity} = fun, kind, meta, clauses) do
+    full_mfa = {module, name, arity}
+
     meta_fun_name = String.to_atom("__tracked_meta__#{name}__#{arity}__")
     tracked_fun_name = String.to_atom("__tracked__#{name}__")
 
@@ -25,10 +27,12 @@ defmodule Phoenix.DataView.Tracked.Compiler do
       |> Enum.concat()
       |> Enum.into(MapSet.new())
 
-    {:ok, new_ast, statics} = FlatAst.Pass.RewriteAst.rewrite(ast, nesting_set)
+    {:ok, new_ast, statics} = FlatAst.Pass.RewriteAst.rewrite(
+      ast, full_mfa, nesting_set)
 
-    expr = FlatAst.ToAst.to_expr(new_ast)
+    expr = FlatAst.ToAst.to_expr(new_ast, pretty: true)
     tracked_defs = Util.fn_to_defs(expr, tracked_fun_name)
+    IO.puts(Macro.to_string(tracked_defs))
 
     meta_fun_ast =
       quote do
