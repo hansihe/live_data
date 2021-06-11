@@ -508,109 +508,12 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
     end
   end
 
-  def transcribe_pattern(pat_id, data, map, out) do
-
-  end
-
-  #def transcribe(expr_id, data, map, backup_resolve, out) do
-  #  false = Map.has_key?(map, expr_id)
-  #  expr = FlatAst.get(data.ast, expr_id)
-
-  #  {new_expr, map} = Util.transform_expr(expr, map, fn
-  #    :value, _selector, expr, map ->
-  #      new_var = Map.fetch!(map, expr)
-  #      {new_var, map}
-  #  end)
-  #end
-
   def transcribe(expr_id, data, map, backup_resolve, out) do
     false = Map.has_key?(map, expr_id)
     expr = FlatAst.get(data.ast, expr_id)
 
     {new_expr_id, map} = transcribe(expr, expr_id, data, map, backup_resolve, out)
     map = Map.put(map, expr_id, new_expr_id)
-
-    {new_expr_id, map}
-  end
-
-  def transcribe(%Expr.MakeMap{prev: nil} = expr, expr_id, data, map, backup_resolve, out) do
-    kvs =
-      Enum.map(expr.kvs, fn {key, val} ->
-        new_key = transcribe(key, data, map, backup_resolve, out)
-        new_val = transcribe(val, data, map, backup_resolve, out)
-
-        {new_key, new_val}
-      end)
-
-    new_expr = %Expr.MakeMap{
-      prev: nil,
-      kvs: kvs
-    }
-
-    new_expr_id = PDAst.add_expr(out, new_expr)
-
-    {new_expr_id, map}
-  end
-
-  def transcribe(%Expr.CallMF{} = expr, expr_id, data, map, backup_resolve, out) do
-    module =
-      if expr.module do
-        transcribe_maybe_scope(expr.module, data, map, backup_resolve, out)
-      end
-
-    function = transcribe_maybe_scope(expr.function, data, map, backup_resolve, out)
-
-    args = Enum.map(expr.args, &transcribe_maybe_scope(&1, data, map, backup_resolve, out))
-
-    new_expr = %Expr.CallMF{
-      module: module,
-      function: function,
-      args: args
-    }
-
-    new_expr_id = PDAst.add_expr(out, new_expr)
-
-    {new_expr_id, map}
-  end
-
-  def transcribe(%Expr.For{} = expr, expr_id, data, map, backup_resolve, out) do
-    new_expr_id = PDAst.add_expr(out)
-    map = Map.put(map, expr_id, new_expr_id)
-
-    items =
-      Enum.map(expr.items, fn
-        {:loop, pattern, binds, body} ->
-          transcribe_maybe_scope(body, data, map, backup_resolve, out)
-
-        {:filter, body} ->
-          transcribe_maybe_scope(body, data, map, backup_resolve, out)
-      end)
-
-    {into, map} =
-      if expr.into do
-        transcribe_maybe_scope(expr.into, data, map, backup_resolve, out)
-      else
-        {nil, map}
-      end
-
-    inner = transcribe_maybe_scope(expr.inner, data, map, backup_resolve, out)
-
-    new_expr = %Expr.For{
-      items: items,
-      into: into,
-      inner: inner
-    }
-
-    :ok = PDAst.set_expr(out, new_expr_id, new_expr)
-
-    {new_expr_id, map}
-  end
-
-  def transcribe(%Expr.AccessField{} = expr, expr_id, data, map, backup_resolve, out) do
-    new_top = transcribe_maybe_scope(expr.top, data, map, backup_resolve, out)
-
-    new_expr = %{expr | top: new_top}
-    new_expr_id = PDAst.add_expr(out, new_expr)
 
     {new_expr_id, map}
   end
@@ -627,22 +530,26 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
     {new_expr_id, map}
   end
 
-  def transcribe({:expr_bind, _eid, _selector} = bind, _bind_id, data, map, backup_resolve, out) do
-    new_bind = transcribe_bind(bind, map, backup_resolve)
-    {new_bind, map}
-  end
+  def transcribe(expr, expr_id, data, map, backup_resolve, out) do
+    new_expr_id = PDAst.add_expr(out)
+    map = Map.put(map, expr_id, new_expr_id)
 
-  def transcribe({:literal, lit}, _lit_id, data, map, backup_resolve, out) do
-    new_lit_id = PDAst.add_literal(out, lit)
-    {new_lit_id, map}
+    {new_expr, map} =
+      Util.transform_expr(expr, map, fn
+        :value, _selector, inner_expr_id, map ->
+          new_expr_id = transcribe_maybe_scope(inner_expr_id, data, map, backup_resolve, out)
+          {new_expr_id, map}
+      end)
+
+    :ok = PDAst.set_expr(out, new_expr_id, new_expr)
+
+    {new_expr_id, map}
   end
 
   def transcribe_maybe_scope(expr_id, data, map, backup_resolve, out) do
     case FlatAst.get(data.ast, expr_id) do
       %Expr.Scope{} = expr ->
-        IO.puts "ENTER SCOPE"
         {new_expr_id, _map} = transcribe(expr_id, data, map, backup_resolve, out)
-        IO.puts "EXIT SCOPE"
         new_expr_id
 
       {:expr_bind, _eid, _selector} = bind ->
