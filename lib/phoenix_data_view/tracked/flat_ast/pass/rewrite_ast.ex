@@ -51,7 +51,13 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
           nesting_set: nesting_set,
           mfa: full_mfa
         }
-        data = Map.put(data, :dependencies, expand_dependencies(MapSet.to_list(dependencies), data, ast))
+
+        data =
+          Map.put(
+            data,
+            :dependencies,
+            expand_dependencies(MapSet.to_list(dependencies), data, ast)
+          )
 
         rewritten = %{}
         transcribed = %{ast.root => new_root}
@@ -97,6 +103,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
       static_structure = rewrite_make_structure_rec(expr_id, ast, expr_id, state)
 
       {:ok, static_result} = state_static_fetch(state, expr_id)
+
       case {static_structure, static_result} do
         {{:slot, 0}, {:unfinished, _nid, [slot_zero_expr], nil}} ->
           case state_static_fetch(state, slot_zero_expr) do
@@ -244,7 +251,6 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
             |> Enum.map(&process_expr_id(&1, expr_id, data))
 
           expand_dependencies_inner(children ++ tail, original, visited, data, ast)
-
       end
     end
   end
@@ -292,15 +298,13 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
     old_rewritten = rewritten
 
     # Step 1: Transcribe dependencies
-    IO.puts "BEGIN TRANSCRIBE"
     {transcribed_exprs, transcribed} =
       scope_exprs
       |> Enum.filter(&MapSet.member?(data.dependencies, &1))
       |> Enum.map_reduce(transcribed, fn dep, map ->
-        {expr, map} = transcribe(dep, data, map, &Map.fetch!(rewritten, &1), out)
+        {expr, map} = Util.Transcribe.transcribe(dep, data, map, &Map.fetch!(rewritten, &1), out)
         {expr, map}
       end)
-    IO.puts "END TRANSCRIBE"
 
     # Step 2: Rewrite statics
     {rewritten_exprs, rewritten} =
@@ -314,12 +318,6 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
 
     new_expr_id = PDAst.add_expr(out, Expr.Scope.new(scope_exprs))
 
-    #fn_expr =
-    #  Expr.Fn.new(0)
-    #  |> Expr.Fn.add_clause([], %{}, nil, new_expr_id)
-
-    #fn_expr_id = PDAst.add_expr(out, Expr.Fn.new(0))
-
     {new_expr_id, old_rewritten}
   end
 
@@ -330,86 +328,60 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
         rewrite_scope_expr(expr, expr_id, data, rewritten, transcribed, out)
 
       {:ok, {:unfinished, _ns, [ret_expr_id], _key}} ->
-        # new_ret_expr_id = Map.get(rewritten, ret_expr_id) || Map.fetch!(transcribed, ret_expr_id)
-        # new_expr_id = PDAst.add_expr(out, Expr.Var.new(new_ret_expr_id))
-        # {new_expr_id, rewritten}
         {[], rewritten}
-
-        # expr = FlatAst.get(data.ast, ret_expr_id)
-        # {result, rewritten} = rewrite_scope_expr(expr, ret_expr_id, data, rewritten, transcribed, out)
-        # rewritten = Map.put(rewritten, expr_id, result)
-        # {result, rewritten}
 
       # Special case, the whole static is useless.
       {:ok, {:finished, {:slot, 0}, [inner_expr_id], nil}} ->
         true = false
-        # rewritten = Map.put(rewritten, expr_id, inner_expr_id)
-        # {inner_expr_id, rewritten}
+
+      # rewritten = Map.put(rewritten, expr_id, inner_expr_id)
+      # {inner_expr_id, rewritten}
 
       {:ok, {:finished, static, slots, key}} ->
         new_slots = Enum.map(slots, &(Map.get(rewritten, &1) || Map.fetch!(transcribed, &1)))
 
         new_key =
-            if key do
-              Map.fetch!(transcribed, key)
-            end
+          if key do
+            Map.fetch!(transcribed, key)
+          end
 
         new_expr = Expr.MakeStatic.new(expr_id, static, new_slots, data.mfa, new_key)
         new_expr_id = PDAst.add_expr(out, new_expr)
         rewritten = Map.put(rewritten, expr_id, new_expr_id)
         {new_expr_id, rewritten}
     end
-    #expr = FlatAst.get(data.ast, expr_id)
-    #rewrite_scope_expr(expr, expr_id, data, rewritten, transcribed, out)
   end
 
-  def rewrite_scope_expr(%Expr.CallMF{} = expr, expr_id, data, rewritten, transcribed, out) do
-    new_module = if expr.module do
-      rewrite_scope_resolve(expr.module, data, rewritten, transcribed, out)
-    end
-
-    new_function = rewrite_scope_resolve(expr.function, data, rewritten, transcribed, out)
-
-    new_args = Enum.map(expr.args, &rewrite_scope_resolve(&1, data, rewritten, transcribed, out))
-
-    new_expr = %Expr.CallMF{
-      module: new_module,
-      function: new_function,
-      args: new_args
-    }
-    new_expr_id = PDAst.add_expr(out, new_expr)
-
-    rewritten = Map.put(rewritten, expr_id, new_expr_id)
-
-    {new_expr_id, rewritten}
-  end
-
-  def rewrite_scope_expr(%Expr.For{} = expr, expr_id, data, rewritten, transcribed, out) do
+  def rewrite_scope_expr(expr, expr_id, data, rewritten, transcribed, out) do
     new_expr_id = PDAst.add_expr(out)
     rewritten = Map.put(rewritten, expr_id, new_expr_id)
 
-    items = Enum.map(expr.items, fn
-      {:loop, pattern, binds, body} ->
-        {expr, _transcribed} = transcribe(body, data, transcribed, &Map.fetch!(rewritten, &1), out)
-        {:loop, pattern, binds, expr}
+    {new_expr, rewritten} =
+      Util.transform_expr(expr, rewritten, fn kind, selector, inner, rewritten ->
+        case {expr, kind, selector} do
+          {%Expr.For{}, :scope, :inner} ->
+            {new_inner, _rewritten} = rewrite_scope(inner, data, rewritten, transcribed, out)
+            {new_inner, rewritten}
 
-      {:filter, body} ->
-        {expr, _transcribed} = transcribe(body, data, transcribed, &Map.fetch!(rewritten, &1), out)
-        {:loop, expr}
-    end)
+          {_, :scope, _} ->
+            {new_inner, _transcribed} =
+              Util.Transcribe.transcribe(
+                inner,
+                data,
+                transcribed,
+                &Map.fetch!(rewritten, &1),
+                out
+              )
 
-    into = if expr.into do
-      Map.fetch!(transcribed, expr.into)
-    end
+            {new_inner, rewritten}
 
-    {inner, _rewritten} = rewrite_scope(expr.inner, data, rewritten, transcribed, out)
+          {_, :pattern, _} ->
+            {inner, rewritten}
+        end
+      end)
 
-    new_expr = %Expr.For{
-      items: items,
-      into: into,
-      inner: inner
-    }
     :ok = PDAst.set_expr(out, new_expr_id, new_expr)
+    rewritten = Map.put(rewritten, expr_id, new_expr_id)
 
     {new_expr_id, rewritten}
   end
@@ -424,6 +396,8 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
     {:literal, literal} = FlatAst.get(data.ast, literal_id)
     PDAst.add_literal(out, literal)
   end
+
+  # Utility functions
 
   def state_static_add(state, static_id) do
     :ok =
@@ -506,66 +480,5 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
       {:"$agent_return", ^agent, return} ->
         return
     end
-  end
-
-  def transcribe(expr_id, data, map, backup_resolve, out) do
-    false = Map.has_key?(map, expr_id)
-    expr = FlatAst.get(data.ast, expr_id)
-
-    {new_expr_id, map} = transcribe(expr, expr_id, data, map, backup_resolve, out)
-    map = Map.put(map, expr_id, new_expr_id)
-
-    {new_expr_id, map}
-  end
-
-  def transcribe(%Expr.Scope{exprs: exprs}, expr_id, data, map, backup_resolve, out) do
-    {new_exprs, _map} =
-      Enum.map_reduce(exprs, map, fn expr, map ->
-        transcribe(expr, data, map, backup_resolve, out)
-      end)
-
-    new_expr = %Expr.Scope{exprs: new_exprs}
-    new_expr_id = PDAst.add_expr(out, new_expr)
-
-    {new_expr_id, map}
-  end
-
-  def transcribe(expr, expr_id, data, map, backup_resolve, out) do
-    new_expr_id = PDAst.add_expr(out)
-    map = Map.put(map, expr_id, new_expr_id)
-
-    {new_expr, map} =
-      Util.transform_expr(expr, map, fn
-        :value, _selector, inner_expr_id, map ->
-          new_expr_id = transcribe_maybe_scope(inner_expr_id, data, map, backup_resolve, out)
-          {new_expr_id, map}
-      end)
-
-    :ok = PDAst.set_expr(out, new_expr_id, new_expr)
-
-    {new_expr_id, map}
-  end
-
-  def transcribe_maybe_scope(expr_id, data, map, backup_resolve, out) do
-    case FlatAst.get(data.ast, expr_id) do
-      %Expr.Scope{} = expr ->
-        {new_expr_id, _map} = transcribe(expr_id, data, map, backup_resolve, out)
-        new_expr_id
-
-      {:expr_bind, _eid, _selector} = bind ->
-        transcribe_bind(bind, map, backup_resolve)
-
-      {:literal, lit} ->
-        PDAst.add_literal(out, lit)
-
-      _ ->
-        Map.fetch!(map, expr_id)
-    end
-  end
-
-  def transcribe_bind({:expr_bind, eid, selector}, map, backup_resolve) do
-    expr_id = {:expr, eid}
-    {:expr, new_eid} = Map.get(map, expr_id) || backup_resolve.(expr_id)
-    {:expr_bind, new_eid, selector}
   end
 end
