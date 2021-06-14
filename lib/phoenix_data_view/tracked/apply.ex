@@ -1,5 +1,7 @@
 defmodule Phoenix.DataView.Tracked.Apply do
-  defstruct root_id: nil,
+  alias Phoenix.DataView.Tracked.Tree
+
+  defstruct templates: %{},
             fragments: %{},
             rendered: nil
 
@@ -11,21 +13,38 @@ defmodule Phoenix.DataView.Tracked.Apply do
     Enum.reduce(ops, state, &apply_op/2)
   end
 
-  def apply_op([:s, fragment_id, fragment], state) do
+  def apply_op({:set_fragment, fragment_id, fragment}, state) do
     put_in(state.fragments[fragment_id], fragment)
   end
 
-  def apply_op([:f, fragment_id], state) do
-    %{state | root_id: fragment_id}
+  def apply_op({:set_template, template_id, template}, state) do
+    put_in(state.templates[template_id], template)
   end
 
-  def apply_op([:r], state) do
-    rendered = render_fragment(state.root_id, state)
+  def apply_op({:render, fragment_id}, state) do
+    rendered = render_fragment(fragment_id, state)
     %{state | rendered: rendered}
   end
 
   def render_fragment(fragment_id, state) do
     fragment = Map.fetch!(state.fragments, fragment_id)
+    apply_refs(fragment, state)
+  end
+
+  def apply_refs(%Tree.Template{} = template, state) do
+    inner_template_ctx =
+      template.slots
+      |> Enum.with_index()
+      |> Enum.map(fn {slot, idx} -> {idx, apply_refs(slot, state)} end)
+      |> Enum.into(%{})
+
+    template_structure = Map.fetch!(state.templates, template.id)
+
+    render_template(template_structure, inner_template_ctx, state)
+  end
+
+  def apply_refs(%Tree.Ref{} = ref, state) do
+    fragment = Map.fetch!(state.fragments, ref)
     apply_refs(fragment, state)
   end
 
@@ -44,15 +63,6 @@ defmodule Phoenix.DataView.Tracked.Apply do
     end)
   end
 
-  def apply_refs({"$r", fragment_id}, state) do
-    fragment = Map.fetch!(state.fragments, fragment_id)
-    apply_refs(fragment, state)
-  end
-
-  def apply_refs({"$e", escaped}, _state) do
-    escaped
-  end
-
   def apply_refs(num, _state) when is_number(num) do
     num
   end
@@ -64,4 +74,21 @@ defmodule Phoenix.DataView.Tracked.Apply do
   def apply_refs(atom, _state) when is_atom(atom) do
     atom
   end
+
+  def render_template(%Tree.Slot{num: num}, ctx, _state) do
+    Map.fetch!(ctx, num)
+  end
+
+  def render_template({:literal, literal}, _ctx, _state) do
+    literal
+  end
+
+  def render_template({:make_map, nil, kvs}, ctx, state) do
+    Enum.reduce(kvs, %{}, fn {key, val}, map ->
+      key_o = render_template(key, ctx, state)
+      val_o = render_template(val, ctx, state)
+      Map.put(map, key_o, val_o)
+    end)
+  end
+
 end

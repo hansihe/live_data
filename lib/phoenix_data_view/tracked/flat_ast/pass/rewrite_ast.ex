@@ -6,6 +6,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
   alias Phoenix.DataView.Tracked.FlatAst.Expr
   alias Phoenix.DataView.Tracked.FlatAst.PDAst
   alias Phoenix.DataView.Tracked.FlatAst.Util
+  alias Phoenix.DataView.Tracked.Tree.Slot
 
   def rewrite(ast, full_mfa, nesting_set) do
     scopes =
@@ -105,7 +106,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
       {:ok, static_result} = state_static_fetch(state, expr_id)
 
       case {static_structure, static_result} do
-        {{:slot, 0}, {:unfinished, _nid, [slot_zero_expr], nil}} ->
+        {%Slot{num: 0}, {:unfinished, _nid, [slot_zero_expr], nil}} ->
           case state_static_fetch(state, slot_zero_expr) do
             {:ok, {:finished, _static, _slots, _key} = val} ->
               :ok = state_static_set(state, expr_id, val)
@@ -331,7 +332,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
         {[], rewritten}
 
       # Special case, the whole static is useless.
-      {:ok, {:finished, {:slot, 0}, [inner_expr_id], nil}} ->
+      {:ok, {:finished, %Slot{num: 0}, [inner_expr_id], nil}} ->
         true = false
 
       # rewritten = Map.put(rewritten, expr_id, inner_expr_id)
@@ -415,7 +416,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
             {next_slot_id, {:unfinished, next_slot_id + 1, [expr_id | slots], key}}
         end)
 
-      {{:slot, slot_id}, state}
+      {%Slot{num: slot_id}, state}
     end)
   end
 

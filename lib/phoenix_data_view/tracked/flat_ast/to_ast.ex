@@ -1,6 +1,7 @@
 defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
   alias Phoenix.DataView.Tracked.FlatAst
   alias Phoenix.DataView.Tracked.FlatAst.Expr
+  alias Phoenix.DataView.Tracked.Tree.Slot
 
   def to_expr(ast, opts \\ []) do
     opts = %{
@@ -164,34 +165,78 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
     {{{:., [], [module_ast, function_ast]}, [], args_ast}, gen}
   end
 
-  def to_expr_inner(%Expr.MakeStatic{} = expr, _expr_id, gen, ast, scope_mode, opts) do
+  def to_expr_inner(%Expr.MakeStatic{key: nil, slots: [inner], static: %Slot{num: 0}} = expr, _expr_id, gen, ast, scope_mode, opts) do
+    to_expr(inner, gen, ast, scope_mode, opts)
+  end
+
+  def to_expr_inner(%Expr.MakeStatic{key: nil} = expr, _expr_id, gen, ast, scope_mode, opts) do
     {slots, gen} = Enum.map_reduce(expr.slots, gen, &to_expr(&1, &2, ast, scope_mode, opts))
 
-    {key, gen} =
-      if expr.key do
-        {key_ast, gen} = to_expr(expr.key, gen, ast, scope_mode, opts)
-        key_ast = quote do
-          {:ok, unquote(key_ast)}
-        end
-
-        {key_ast, gen}
-      else
-        {nil, gen}
-      end
-
     id_expr = Macro.escape({expr.mfa, expr.static_id})
+    template_expr = Macro.escape(expr.static)
 
     expr =
       quote do
-        %Phoenix.DataView.Tracked.Tree.Static{
+        %Phoenix.DataView.Tracked.RenderTree.Static{
           id: unquote(id_expr),
-          slots: fn -> unquote(slots) end,
-          key: unquote(key)
+          template: unquote(template_expr),
+          slots: unquote(slots)
         }
       end
 
     {expr, gen}
   end
+
+  def to_expr_inner(%Expr.MakeStatic{key: key} = expr, expr_id, gen, ast, scope_mode, opts) do
+    {key_expr, gen} = to_expr(key, gen, ast, scope_mode, opts)
+    {inner_expr, gen} = to_expr_inner(%{expr | key: nil}, expr_id, gen, ast, scope_mode, opts)
+
+    id_expr = Macro.escape({expr.mfa, expr.static_id})
+
+    expr =
+      quote do
+        %Phoenix.DataView.Tracked.RenderTree.Keyed{
+          id: unquote(id_expr),
+          key: unquote(key_expr),
+          escapes: :always,
+          render: fn -> unquote(inner_expr) end
+        }
+      end
+
+    {expr, gen}
+  end
+
+
+  #def to_expr_inner(%Expr.MakeStatic{} = expr, _expr_id, gen, ast, scope_mode, opts) do
+  #  {slots, gen} = Enum.map_reduce(expr.slots, gen, &to_expr(&1, &2, ast, scope_mode, opts))
+
+  #  {key, gen} =
+  #    if expr.key do
+  #      {key_ast, gen} = to_expr(expr.key, gen, ast, scope_mode, opts)
+  #      key_ast = quote do
+  #        {:ok, unquote(key_ast)}
+  #      end
+
+  #      {key_ast, gen}
+  #    else
+  #      {nil, gen}
+  #    end
+
+  #  id_expr = Macro.escape({expr.mfa, expr.static_id})
+  #  template_expr = Macro.escape(expr.static)
+
+  #  expr =
+  #    quote do
+  #      %Phoenix.DataView.Tracked.Tree.Static{
+  #        id: unquote(id_expr),
+  #        template: unquote(template_expr),
+  #        data: fn -> unquote(slots) end,
+  #        key: unquote(key)
+  #      }
+  #    end
+
+  #  {expr, gen}
+  #end
 
   def to_pattern(pattern_id, gen, ast, opts) do
     pattern = FlatAst.get(ast, pattern_id)
