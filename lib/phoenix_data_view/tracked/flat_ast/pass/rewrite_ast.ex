@@ -26,9 +26,9 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
     fn_expr = %Expr.Fn{} = FlatAst.get(ast, ast.root)
 
     {new_clauses, statics} =
-      Enum.map_reduce(fn_expr.clauses, %{}, fn {patterns, binds, guard, body}, statics_acc ->
+      Enum.map_reduce(fn_expr.clauses, %{}, fn %Expr.Fn.Clause{} = clause, statics_acc ->
         new_guard =
-          if guard do
+          if clause.guard do
             true = false
             # transcribe(guard, ast, out)
           end
@@ -38,7 +38,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
             %{statics: %{}, traversed: MapSet.new(), dependencies: MapSet.new()}
           end)
 
-        rewrite_root = rewrite_make_structure(body, ast, state)
+        rewrite_root = rewrite_make_structure(clause.body, ast, state)
 
         %{statics: statics, traversed: traversed, dependencies: dependencies} =
           Agent.get(state, fn state -> state end)
@@ -62,9 +62,10 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
 
         rewritten = %{}
         transcribed = %{ast.root => new_root}
-        {new_body, _transcribed} = rewrite_scope(body, data, rewritten, transcribed, out)
+        {new_body, _transcribed} = rewrite_scope(clause.body, data, rewritten, transcribed, out)
 
-        {{patterns, binds, new_guard, new_body}, Map.merge(statics_acc, statics)}
+        clause = %{clause | guard: new_guard, body: new_body}
+        {clause, Map.merge(statics_acc, statics)}
       end)
 
     new_expr = %{fn_expr | clauses: new_clauses}

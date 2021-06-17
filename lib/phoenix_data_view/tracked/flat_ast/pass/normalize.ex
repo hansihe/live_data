@@ -14,17 +14,17 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.Normalize do
     %Expr.Fn{} = expr = FlatAst.get(ast, ast.root)
 
     {new_clauses, ast} =
-      Enum.map_reduce(expr.clauses, ast, fn {patterns, binds, guard, body}, ast ->
+      Enum.map_reduce(expr.clauses, ast, fn %Expr.Fn.Clause{} = clause, ast ->
         {new_guard, ast} =
-          if guard do
-            flatten_block(guard, ast)
+          if clause.guard do
+            flatten_block(clause.guard, ast)
           else
-            {guard, ast}
+            {nil, ast}
           end
 
-        {new_body, ast} = flatten_block(body, ast)
+        {new_body, ast} = flatten_block(clause.body, ast)
 
-        {{patterns, binds, new_guard, new_body}, ast}
+        {%{clause | guard: new_guard, body: new_body}, ast}
       end)
 
     ast =

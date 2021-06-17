@@ -10,7 +10,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
 
     generated_bindings = %{}
     {expr, _gen} = to_expr(ast.root, generated_bindings, ast, false, opts)
-    expr
+    IO.inspect(expr)
   end
 
   def to_expr(expr_id, gen, ast, false, opts) do
@@ -54,31 +54,40 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
     {clauses, gen} =
       expr.clauses
       |> Enum.with_index()
-      |> Enum.map_reduce(gen, fn {{pattern_ids, pattern_bind_map, guard_id, body_id}, clause_idx},
-                                            gen ->
+      |> Enum.map_reduce(gen, fn {%Expr.Fn.Clause{} = clause, clause_idx}, gen ->
         {:expr, eid} = expr_id
 
         {patterns_ast, gen} =
-          Enum.map_reduce(pattern_ids, gen, fn pattern_id, gen ->
+          Enum.map_reduce(clause.patterns, gen, fn pattern_id, gen ->
             to_pattern(pattern_id, gen, ast, opts)
           end)
 
-        gen = Enum.reduce(pattern_bind_map, gen, fn {idx, var}, gen ->
-          sub = {:expr_bind, eid, {clause_idx, idx}}
-          Map.put(gen, sub, var)
-        end)
+        gen =
+          Enum.reduce(clause.binds, gen, fn {idx, var}, gen ->
+            sub = {:expr_bind, eid, {clause_idx, idx}}
+            Map.put(gen, sub, var)
+          end)
 
-        nil = guard_id
+        nil = clause.guard
 
-        {body_ast, gen} = to_expr(body_id, gen, ast, scope_mode, opts)
+        {body_ast, gen} = to_expr(clause.body, gen, ast, scope_mode, opts)
 
-        {{:->, [], [patterns_ast, body_ast]}, gen}
+        opts = make_opts(location: clause.location)
+        {{:->, opts, [patterns_ast, body_ast]}, gen}
       end)
 
-    {{:fn, [], clauses}, gen}
+    opts = make_opts(location: expr.location)
+    {{:fn, opts, clauses}, gen}
   end
 
-  def to_expr_inner(%Expr.SimpleAssign{inner: inner}, {:expr, eid}, gen, ast, scope_mode, opts) do
+  def to_expr_inner(
+        %Expr.SimpleAssign{inner: inner},
+        {:expr, eid},
+        gen,
+        ast,
+        scope_mode,
+        opts
+      ) do
     {inner_ast, gen} = to_expr(inner, gen, ast, scope_mode, opts)
 
     unique_var = make_unique_var(opts)
@@ -87,17 +96,56 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
     {{:=, [], [var_to_expr(unique_var, gen), inner_ast]}, gen}
   end
 
-  def to_expr_inner(%Expr.Block{exprs: exprs}, _expr_id, gen, ast, _scope_mode, opts) do
+  def to_expr_inner(
+        %Expr.Block{exprs: exprs, location: location},
+        _expr_id,
+        gen,
+        ast,
+        _scope_mode,
+        opts
+      ) do
     {inner, gen} = Enum.map_reduce(exprs, gen, &to_expr(&1, &2, ast, false, opts))
-    {{:__block__, [], inner}, gen}
+
+    opts = make_opts(location: location)
+    {{:__block__, opts, inner}, gen}
   end
 
-  def to_expr_inner(%Expr.Scope{exprs: exprs}, _expr_id, gen, ast, _scope_mode, opts) do
+  def to_expr_inner(
+        %Expr.Scope{exprs: exprs, location: location},
+        _expr_id,
+        gen,
+        ast,
+        _scope_mode,
+        opts
+      ) do
     {inner, gen} = Enum.map_reduce(exprs, gen, &to_expr(&1, &2, ast, true, opts))
-    {{:__block__, [], inner}, gen}
+
+    opts = make_opts(location: location)
+    {{:__block__, opts, inner}, gen}
   end
 
-  def to_expr_inner(%Expr.MakeMap{prev: nil, kvs: kvs}, _expr_id, gen, ast, scope_mode, opts) do
+  def to_expr_inner(
+        %Expr.Match{pattern: pattern, binds: binds, rhs: rhs, location: location},
+        {:expr, eid},
+        gen,
+        ast,
+        scope_mode,
+        opts
+      ) do
+    {pattern_ast, gen} = to_pattern(pattern, gen, ast, opts)
+    {rhs_ast, gen} = to_expr(rhs, gen, ast, scope_mode, opts)
+
+    gen =
+      Enum.reduce(binds, gen, fn {idx, var}, gen ->
+        sub = {:expr_bind, eid, idx}
+        Map.put(gen, sub, var)
+      end)
+
+    opts = make_opts(location: location)
+    {{:=, opts, [pattern_ast, rhs_ast]}, gen}
+  end
+
+  def to_expr_inner(%Expr.MakeMap{prev: nil, kvs: kvs, location: location}, _expr_id, gen, ast, scope_mode, opts) do
     {kvs_ast, gen} =
       Enum.map_reduce(kvs, gen, fn {key, value}, gen ->
         {key_ast, gen} = to_expr(key, gen, ast, scope_mode, opts)
@@ -105,7 +153,14 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
         {{key_ast, value_ast}, gen}
       end)
 
-    {{:%{}, [], kvs_ast}, gen}
+    opts = make_opts(location: location)
+    {{:%{}, opts, kvs_ast}, gen}
+  end
+
+  def to_expr_inner(%Expr.MakeCons{head: head, tail: tail}, _expr_id, gen, ast, scope_mode, opts) do
+    {head_ast, gen} = to_expr(head, gen, ast, scope_mode, opts)
+    {tail_ast, gen} = to_expr(tail, gen, ast, scope_mode, opts)
+    {[{:|, [], [head_ast, tail_ast]}], gen}
   end
 
   def to_expr_inner(%Expr.For{} = expr, {:expr, eid}, gen, ast, scope_mode, opts) do
@@ -118,10 +173,11 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
         {{:loop, pattern_id, binds_map, expr_id}, item_idx}, gen ->
           {pattern_ast, gen} = to_pattern(pattern_id, gen, ast, opts)
 
-          gen = Enum.reduce(binds_map, gen, fn {idx, var}, gen ->
-            sub = {:expr_bind, eid, {item_idx, idx}}
-            Map.put(gen, sub, var)
-          end)
+          gen =
+            Enum.reduce(binds_map, gen, fn {idx, var}, gen ->
+              sub = {:expr_bind, eid, {item_idx, idx}}
+              Map.put(gen, sub, var)
+            end)
 
           {expr_ast, gen} = to_expr(expr_id, gen, ast, scope_mode, opts)
           {{:<-, [], [pattern_ast, expr_ast]}, gen}
@@ -132,19 +188,22 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
 
     {body_ast, gen} = to_expr(expr.inner, gen, ast, scope_mode, opts)
 
-    {{:for, [], Enum.concat([items, [[do: body_ast]]])}, gen}
+    opts = make_opts(location: expr.location)
+    {{:for, opts, Enum.concat([items, [[do: body_ast]]])}, gen}
   end
 
   def to_expr_inner(%Expr.AccessField{} = expr, _expr_id, gen, ast, scope_mode, opts) do
     {top_expr, gen} = to_expr(expr.top, gen, ast, scope_mode, opts)
     field = expr.field
 
-    {{{:., [], [top_expr, field]}, [no_parens: true], []}, gen}
+    opts = make_opts(location: expr.location)
+    {{{:., opts, [top_expr, field]}, [no_parens: true], []}, gen}
   end
 
-  def to_expr_inner(%Expr.Var{ref_expr: ref_expr}, _expr_id, gen, ast, scope_mode, opts) do
+  def to_expr_inner(%Expr.Var{ref_expr: ref_expr, location: location}, _expr_id, gen, ast, scope_mode, opts) do
     var = Map.fetch!(ast.variables, ref_expr)
-    var_ast = var_to_expr(var, gen)
+    opts = make_opts(location: location)
+    var_ast = var_to_expr(var, gen, opts)
     {var_ast, gen}
   end
 
@@ -153,7 +212,8 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
 
     {args_ast, gen} = Enum.map_reduce(expr.args, gen, &to_expr(&1, &2, ast, scope_mode, opts))
 
-    {{function_ast, [], args_ast}, gen}
+    opts = make_opts(location: expr.location)
+    {{function_ast, opts, args_ast}, gen}
   end
 
   def to_expr_inner(%Expr.CallMF{} = expr, _expr_id, gen, ast, scope_mode, opts) do
@@ -162,10 +222,18 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
 
     {args_ast, gen} = Enum.map_reduce(expr.args, gen, &to_expr(&1, &2, ast, scope_mode, opts))
 
-    {{{:., [], [module_ast, function_ast]}, [], args_ast}, gen}
+    opts = make_opts(location: expr.location)
+    {{{:., [], [module_ast, function_ast]}, opts, args_ast}, gen}
   end
 
-  def to_expr_inner(%Expr.MakeStatic{key: nil, slots: [inner], static: %Slot{num: 0}} = expr, _expr_id, gen, ast, scope_mode, opts) do
+  def to_expr_inner(
+        %Expr.MakeStatic{key: nil, slots: [inner], static: %Slot{num: 0}} = expr,
+        _expr_id,
+        gen,
+        ast,
+        scope_mode,
+        opts
+      ) do
     to_expr(inner, gen, ast, scope_mode, opts)
   end
 
@@ -206,8 +274,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
     {expr, gen}
   end
 
-
-  #def to_expr_inner(%Expr.MakeStatic{} = expr, _expr_id, gen, ast, scope_mode, opts) do
+  # def to_expr_inner(%Expr.MakeStatic{} = expr, _expr_id, gen, ast, scope_mode, opts) do
   #  {slots, gen} = Enum.map_reduce(expr.slots, gen, &to_expr(&1, &2, ast, scope_mode, opts))
 
   #  {key, gen} =
@@ -236,7 +303,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
   #    end
 
   #  {expr, gen}
-  #end
+  # end
 
   def to_pattern(pattern_id, gen, ast, opts) do
     pattern = FlatAst.get(ast, pattern_id)
@@ -247,12 +314,14 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
     {var_to_expr(var, gen), gen}
   end
 
-  def var_to_expr({name, nil, ctx}, _gen) do
-    {name, [], ctx}
+  def var_to_expr(var_info, gen, opts \\ [])
+
+  def var_to_expr({name, nil, ctx}, _gen, opts) do
+    {name, opts, ctx}
   end
 
-  def var_to_expr({name, counter, ctx}, _gen) do
-    {name, [counter: counter], ctx}
+  def var_to_expr({name, counter, ctx}, _gen, opts) do
+    {name, [{:counter, counter} | opts], ctx}
   end
 
   def make_unique_var(opts) do
@@ -263,6 +332,14 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
     else
       counter = :erlang.unique_integer([])
       {:gen_var, counter, nil}
+    end
+  end
+
+  def make_opts(args) do
+    case Keyword.fetch(args, :location) do
+      {:ok, {line, nil}} -> [line: line]
+      {:ok, {line, column}} -> [line: line, column: column]
+      _ -> []
     end
   end
 end

@@ -26,8 +26,8 @@ defmodule Phoenix.DataView.Tracked.Util do
 
   def fn_to_defs({:fn, _opts1, clauses}, name) do
     Enum.map(clauses, fn
-      {:->, [], [args, body]} ->
-        {:def, [],
+      {:->, opts, [args, body]} ->
+        {:def, opts,
          [
            {name, [], args},
            [do: body]

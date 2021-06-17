@@ -8,6 +8,7 @@ defmodule Phoenix.DataView.Tracked.Encoding.JSON do
   @op_set_fragment_root_template 2
   @op_patch_fragment 3
   @op_set_template 4
+  @op_reset 5
 
   def new do
     %{
@@ -77,12 +78,12 @@ defmodule Phoenix.DataView.Tracked.Encoding.JSON do
 
   def escape_fragment(%{} = map, state) do
     {kvs, state} =
-      Enum.map_reduce(map, state, fn {k, v} ->
+      Enum.map_reduce(map, state, fn {k, v}, state ->
         {v_out, state} = escape_fragment(v, state)
         {{k, v_out}, state}
       end)
 
-    out = Map.into(kvs, %{})
+    out = Enum.into(kvs, %{})
     {out, state}
   end
 

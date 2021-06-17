@@ -42,6 +42,9 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Util.Transcribe do
         :value, _selector, inner_expr_id, map ->
           new_expr_id = transcribe_maybe_scope(inner_expr_id, data, map, backup_resolve, out)
           {new_expr_id, map}
+
+        :pattern, _selector, {pattern, binds}, map ->
+          {{pattern, binds}, map}
       end)
 
     :ok = PDAst.set_expr(out, new_expr_id, new_expr)

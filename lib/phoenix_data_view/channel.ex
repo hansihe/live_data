@@ -9,6 +9,7 @@ defmodule Phoenix.DataView.Channel do
   alias Phoenix.DataView.Tracked.Diff
   alias Phoenix.DataView.Tracked.Render
   alias Phoenix.DataView.Tracked.Tree
+  alias Phoenix.DataView.Tracked.Encoding
 
   @prefix :phoenix
 
@@ -16,7 +17,8 @@ defmodule Phoenix.DataView.Channel do
             view: nil,
             topic: nil,
             serializer: nil,
-            tracked_state: nil
+    tracked_state: nil,
+   json_encoder: nil
 
   def start_link({endpoint, from}) do
     IO.inspect({endpoint, from})
@@ -93,7 +95,9 @@ defmodule Phoenix.DataView.Channel do
       socket: socket,
       view: view_module,
       topic: phx_socket.topic,
-      serializer: phx_socket.serializer
+      serializer: phx_socket.serializer,
+      tracked_state: Tree.new(),
+      json_encoder: Encoding.JSON.new()
     }
 
     state = maybe_call_data_view_mount!(state, params)
@@ -105,27 +109,17 @@ defmodule Phoenix.DataView.Channel do
     {:noreply, state}
   end
 
-  defp render_view(%{tracked_state: nil} = state) do
-    tree = state.view.__tracked_render__(state.socket.assigns)
-
-    ids_state = %{ids: %{}, visited: %{}, counter: 0}
-    %{ids: keyed_ids} = state.view.__tracked_ids_render_1__(ids_state)
-
-    tracked_state = Tree.new(keyed_ids)
+  defp render_view(%{tracked_state: tracked_state, json_encoder: json_encoder} = state) do
+    tree = state.view.__tracked__render__(state.socket.assigns)
 
     {ops, tracked_state} = Tree.render(tree, tracked_state)
-    state = %{state | tracked_state: tracked_state}
+    IO.inspect(ops)
+    {encoded_ops, json_encoder} = Encoding.JSON.format(ops, json_encoder)
+    IO.inspect encoded_ops
 
-    push(state, "o", %{"o" => ops})
-  end
+    state = %{state | tracked_state: tracked_state, json_encoder: json_encoder}
 
-  defp render_view(%{tracked_state: tracked_state} = state) do
-    tree = state.view.__tracked_render__(state.socket.assigns)
-
-    {ops, tracked_state} = Tree.render(tree, tracked_state)
-    state = %{state | tracked_state: tracked_state}
-
-    push(state, "o", %{"o" => ops})
+    push(state, "o", %{"o" => encoded_ops})
   end
 
   defp maybe_call_data_view_mount!(state, params) do

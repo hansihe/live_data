@@ -11,9 +11,9 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Expr.Scope do
   As with normal blocks, the last value in the scope is the result.
   """
 
-  defstruct exprs: []
+  defstruct exprs: [], location: nil
 
-  def new(exprs) do
+  def new(exprs, location \\ nil) do
     %__MODULE__{
       exprs: exprs
     }

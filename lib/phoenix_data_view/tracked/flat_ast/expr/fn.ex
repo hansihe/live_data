@@ -1,25 +1,48 @@
 defmodule Phoenix.DataView.Tracked.FlatAst.Expr.Fn do
-  defstruct arity: nil, clauses: []
+  defstruct arity: nil, clauses: [], location: nil
 
-  def new(arity) do
+  defmodule Clause do
+    defstruct patterns: nil, binds: nil, guard: nil, body: nil, location: nil
+  end
+
+  def new(arity, location \\ nil) do
     %__MODULE__{
-      arity: arity
+      arity: arity,
+      location: location
     }
   end
 
-  def add_clause(defa, patterns, pattern_vars, {:expr, _b} = guard, {:expr, _c} = body) do
+  def add_clause(defa, patterns, binds, guard, body, location \\ nil)
+
+  def add_clause(defa, patterns, binds, {:expr, _b} = guard, {:expr, _c} = body, location) do
     num_patterns = Enum.count(patterns)
     ^num_patterns = defa.arity
     :ok = Enum.each(patterns, fn {:pattern, _a} -> :ok end)
 
-    %{defa | clauses: [{patterns, pattern_vars, guard, body}]}
+    clause = %Clause{
+      patterns: patterns,
+      binds: binds,
+      guard: guard,
+      body: body,
+      location: location
+    }
+
+    %{defa | clauses: [clause | defa.clauses]}
   end
 
-  def add_clause(defa, patterns, pattern_vars, nil, {:expr, _c} = body) do
+  def add_clause(defa, patterns, binds, nil, {:expr, _c} = body, location) do
     num_patterns = Enum.count(patterns)
     ^num_patterns = defa.arity
     :ok = Enum.each(patterns, fn {:pattern, _a} -> :ok end)
 
-    %{defa | clauses: [{patterns, pattern_vars, nil, body}]}
+    clause = %Clause{
+      patterns: patterns,
+      binds: binds,
+      guard: nil,
+      body: body,
+      location: location
+    }
+
+    %{defa | clauses: [clause | defa.clauses]}
   end
 end

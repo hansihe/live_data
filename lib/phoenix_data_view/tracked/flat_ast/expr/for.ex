@@ -1,11 +1,12 @@
 defmodule Phoenix.DataView.Tracked.FlatAst.Expr.For do
-  defstruct items: nil, into: nil, inner: nil
+  defstruct items: nil, into: nil, inner: nil, location: nil
 
-  def new(items, into, inner) do
+  def new(items, into, inner, location \\ nil) do
     %__MODULE__{
       items: items,
       into: into,
-      inner: inner
+      inner: inner,
+      location: location
     }
   end
 end

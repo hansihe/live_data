@@ -1,10 +1,11 @@
 defmodule Phoenix.DataView.Tracked.FlatAst.Expr.AccessField do
-  defstruct top: nil, field: nil
+  defstruct top: nil, field: nil, location: nil
 
-  def new(top, field) do
+  def new(top, field, location \\ nil) do
     %__MODULE__{
       top: top,
-      field: field
+      field: field,
+      location: location
     }
   end
 end

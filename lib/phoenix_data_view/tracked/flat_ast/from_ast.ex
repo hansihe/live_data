@@ -5,17 +5,21 @@ defmodule Phoenix.DataView.Tracked.FlatAst.FromAst do
   def from_clauses([first_clause | _] = clauses) do
     {:ok, out} = PDAst.init()
 
-    {_opts, args, _guard, _body} = first_clause
+    {first_clause_opts, args, _guard, _body} = first_clause
     num_args = Enum.count(args)
+
+    first_clause_location = make_location(first_clause_opts)
 
     expr_id = PDAst.add_expr(out)
 
-    fun = Expr.Fn.new(num_args)
+    fun = Expr.Fn.new(num_args, first_clause_opts)
     scope = %{}
 
     fun =
       Enum.with_index(clauses)
-      |> Enum.reduce(fun, fn {{_opts, args, guard, body}, clause_idx}, fun ->
+      |> Enum.reduce(fun, fn {{opts, args, guard, body}, clause_idx}, fun ->
+        location = make_location(opts)
+
         {pat_var_map, patterns} = handle_patterns(args, scope, out)
 
         scope =
@@ -35,7 +39,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.FromAst do
 
         {body_expr, _scope} = from_expr(body, scope, out)
 
-        Expr.Fn.add_clause(fun, patterns, pat_var_map, guard_expr, body_expr)
+        Expr.Fn.add_clause(fun, patterns, pat_var_map, guard_expr, body_expr, location)
       end)
 
     :ok = PDAst.set_expr(out, expr_id, fun)
@@ -60,8 +64,8 @@ defmodule Phoenix.DataView.Tracked.FlatAst.FromAst do
         from_expr(item, scope, out)
       end)
 
-    expr_id = PDAst.add_expr(out)
-    :ok = PDAst.set_expr(out, expr_id, Expr.Block.new(exprs))
+    location = make_location(opts)
+    expr_id = PDAst.add_expr(out, Expr.Block.new(exprs, location))
 
     {expr_id, scope}
   end
@@ -78,12 +82,36 @@ defmodule Phoenix.DataView.Tracked.FlatAst.FromAst do
   #  {expr_id, scope}
   # end
 
-  def from_expr({name, _opts, ctx} = var, scope, out) when is_atom(name) and is_atom(ctx) do
+  def from_expr({name, opts, ctx} = var, scope, out) when is_atom(name) and is_atom(ctx) do
     var = process_var(var)
     ref_expr = Map.fetch!(scope, var)
 
+    location = make_location(opts)
+    expr_id = PDAst.add_expr(out, Expr.Var.new(ref_expr, location))
+
+    {expr_id, scope}
+  end
+
+  def from_expr({:=, opts, [lhs, rhs]}, scope, out) do
     expr_id = PDAst.add_expr(out)
-    :ok = PDAst.set_expr(out, expr_id, Expr.Var.new(ref_expr))
+
+    {rhs_expr, scope} = from_expr(rhs, scope, out)
+
+    {binds_map, [pat]} = handle_patterns([lhs], scope, out)
+
+    scope =
+      Enum.reduce(binds_map, scope, fn {idx, var}, scope ->
+        {:expr, eid} = expr_id
+        bind_id = {:expr_bind, eid, idx}
+
+        :ok = PDAst.add_variable(out, var, bind_id)
+
+        Map.put(scope, var, bind_id)
+      end)
+
+    location = make_location(opts)
+    :ok = PDAst.set_expr(out, expr_id, Expr.Match.new(
+          pat, binds_map, rhs_expr, location))
 
     {expr_id, scope}
   end
@@ -97,8 +125,8 @@ defmodule Phoenix.DataView.Tracked.FlatAst.FromAst do
         {{key_expr, value_expr}, scope}
       end)
 
-    expr_id = PDAst.add_expr(out)
-    :ok = PDAst.set_expr(out, expr_id, Expr.MakeMap.new(nil, kv_exprs))
+    location = make_location(opts)
+    expr_id = PDAst.add_expr(out, Expr.MakeMap.new(nil, kv_exprs, location))
 
     {expr_id, scope}
   end
@@ -112,7 +140,8 @@ defmodule Phoenix.DataView.Tracked.FlatAst.FromAst do
           Enum.count(args)
       end
 
-    fun = Expr.Fn.new(args_count)
+    location = make_location(opts)
+    fun = Expr.Fn.new(args_count, location)
 
     fun =
       clauses
@@ -120,6 +149,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.FromAst do
       |> Enum.reduce(fun, fn
         {{:->, clause_opts, [args, body]}, clause_idx}, fun ->
           ^args_count = Enum.count(args)
+          location = make_location(clause_opts)
 
           {pat_var_map, patterns} = handle_patterns(args, scope, out)
 
@@ -135,7 +165,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.FromAst do
 
           {body_expr, _scope} = from_expr(body, scope, out)
 
-          Expr.Fn.add_clause(fun, patterns, pat_var_map, nil, body_expr)
+          Expr.Fn.add_clause(fun, patterns, pat_var_map, nil, body_expr, location)
       end)
 
     :ok = PDAst.set_expr(out, expr_id, fun)
@@ -194,46 +224,68 @@ defmodule Phoenix.DataView.Tracked.FlatAst.FromAst do
 
     {body_expr, scope} = from_expr(Keyword.fetch!(meta_items, :do), scope, out)
 
-    :ok = PDAst.set_expr(out, expr_id, Expr.For.new(item_exprs, into_expr, body_expr))
+    location = make_location(opts)
+    :ok = PDAst.set_expr(out, expr_id, Expr.For.new(item_exprs, into_expr, body_expr, location))
 
     {expr_id, outer_scope}
   end
 
-  def from_expr(atom, scope, out) when is_atom(atom) do
-    lit_id = PDAst.add_literal(out, atom)
+  def from_expr([head | tail], scope, out) do
+    {head_expr, scope} = from_expr(head, scope, out)
+    {tail_expr, scope} = from_expr(tail, scope, out)
 
-    {lit_id, scope}
-  end
-
-  def from_expr({function, _opts, args} = a, scope, out) when is_atom(function) do
-    {function_expr, scope} = from_expr(function, scope, out)
-
-    {arg_exprs, scope} = Enum.map_reduce(args, scope, &from_expr(&1, &2, out))
-
-    expr_id = PDAst.add_expr(out)
-    :ok = PDAst.set_expr(out, expr_id, Expr.CallMF.new(nil, function_expr, arg_exprs))
+    expr_id = PDAst.add_expr(out, Expr.MakeCons.new(head_expr, tail_expr))
 
     {expr_id, scope}
   end
 
-  def from_expr({{:., _opts1, [module, function]}, _opts2, args}, scope, out)
+  def from_expr([], scope, out) do
+    lit_id = PDAst.add_literal(out, [])
+    {lit_id, scope}
+  end
+
+  def from_expr(binary, scope, out) when is_binary(binary) do
+    lit_id = PDAst.add_literal(out, binary)
+    {lit_id, scope}
+  end
+
+  def from_expr(atom, scope, out) when is_atom(atom) do
+    lit_id = PDAst.add_literal(out, atom)
+    {lit_id, scope}
+  end
+
+  def from_expr({function, opts, args} = a, scope, out) when is_atom(function) do
+    {function_expr, scope} = from_expr(function, scope, out)
+
+    {arg_exprs, scope} = Enum.map_reduce(args, scope, &from_expr(&1, &2, out))
+
+    location = make_location(opts)
+    expr_id = PDAst.add_expr(out, Expr.CallMF.new(
+          nil, function_expr, arg_exprs, location))
+
+    {expr_id, scope}
+  end
+
+  def from_expr({{:., _opts1, [module, function]}, opts, args}, scope, out)
       when is_atom(module) and is_atom(function) do
     {module_expr, scope} = from_expr(module, scope, out)
     {function_expr, scope} = from_expr(function, scope, out)
 
     {arg_exprs, scope} = Enum.map_reduce(args, scope, &from_expr(&1, &2, out))
 
-    expr_id = PDAst.add_expr(out)
-    :ok = PDAst.set_expr(out, expr_id, Expr.CallMF.new(module_expr, function_expr, arg_exprs))
+    location = make_location(opts)
+    expr_id = PDAst.add_expr(out, Expr.CallMF.new(
+          module_expr, function_expr, arg_exprs, location))
 
     {expr_id, scope}
   end
 
-  def from_expr({{:., _opts1, [top, field]}, _opts2, args}, scope, out) when is_atom(field) do
+  def from_expr({{:., opts, [top, field]}, _opts2, []}, scope, out) when is_atom(field) do
     {top_expr, scope} = from_expr(top, scope, out)
 
-    expr_id = PDAst.add_expr(out)
-    :ok = PDAst.set_expr(out, expr_id, Expr.AccessField.new(top_expr, field))
+    location = make_location(opts)
+    expr_id = PDAst.add_expr(out, Expr.AccessField.new(
+          top_expr, field, location))
 
     {expr_id, scope}
   end
@@ -266,5 +318,11 @@ defmodule Phoenix.DataView.Tracked.FlatAst.FromAst do
   defp process_var({name, opts, ctx}) when is_atom(name) and is_atom(ctx) do
     counter = Keyword.get(opts, :counter)
     {name, counter, ctx}
+  end
+
+  defp make_location(opts) do
+    line = Keyword.get(opts, :line)
+    column = Keyword.get(opts, :column)
+    {line, column}
   end
 end

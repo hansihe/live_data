@@ -4,6 +4,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst do
             variables: %{},
             literals: %{},
             literals_back: %{},
+            locations: %{},
             root: nil,
             next_id: 0,
             aux: nil
@@ -46,6 +47,10 @@ defmodule Phoenix.DataView.Tracked.FlatAst do
   def make_literal_id(ast) do
     {id, ast} = next_id(ast)
     {{:literal, id}, ast}
+  end
+
+  def set_location(ast, item_id, line, column \\ nil) do
+    put_in(ast.locations[item_id], {line, column})
   end
 
   def add_expr(ast, body \\ nil) do

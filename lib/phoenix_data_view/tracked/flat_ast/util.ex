@@ -170,19 +170,19 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Util do
       expr.clauses
       |> Enum.with_index()
       |> Enum.map_reduce(acc, fn
-        {{pattern, binds, guard, body}, idx}, acc ->
-          {{new_pattern, new_binds}, acc} = fun.(:pattern, {idx, :pattern}, {pattern, binds}, acc)
+        {%Expr.Fn.Clause{} = clause, idx}, acc ->
+          {{new_patterns, new_binds}, acc} = fun.(:pattern, {idx, :pattern}, {clause.patterns, clause.binds}, acc)
 
           {new_guard, acc} =
-            if guard do
-              fun.(:scope, {idx, :guard}, guard, acc)
+            if clause.guard do
+              fun.(:scope, {idx, :guard}, clause.guard, acc)
             else
               {nil, acc}
             end
 
-          {new_body, acc} = fun.(:scope, {idx, :body}, body, acc)
+          {new_body, acc} = fun.(:scope, {idx, :body}, clause.body, acc)
 
-          {{new_pattern, new_binds, new_guard, new_body}, acc}
+          {%{clause | patterns: new_patterns, binds: new_binds, guard: new_guard, body: new_body}, acc}
       end)
 
     new_expr = %{expr | clauses: clauses}
@@ -241,6 +241,22 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Util do
       prev: new_prev,
       kvs: new_kvs
     }
+    {new_expr, acc}
+  end
+
+  def transform_expr(%Expr.Match{} = expr, acc, fun) do
+    {{new_pattern, new_binds}, acc} = fun.(:pattern, :lhs, {expr.pattern, expr.binds}, acc)
+    {new_rhs, acc} = fun.(:value, :rhs, expr.rhs, acc)
+
+    new_expr = %{expr | pattern: new_pattern, binds: new_binds, rhs: new_rhs}
+    {new_expr, acc}
+  end
+
+  def transform_expr(%Expr.MakeCons{} = expr, acc, fun) do
+    {new_head, acc} = fun.(:value, :head, expr.head, acc)
+    {new_tail, acc} = fun.(:value, :tail, expr.tail, acc)
+
+    new_expr = %{expr | head: new_head, tail: new_tail}
     {new_expr, acc}
   end
 
