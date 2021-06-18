@@ -57,6 +57,13 @@ defmodule Phoenix.DataView.Channel do
     {:noreply, state}
   end
 
+  def handle_info(message, state) do
+    {:ok, socket} = state.view.handle_info(message, state.socket)
+    state = %{state | socket: socket}
+    state = render_view(state)
+    {:noreply, state}
+  end
+
   defp mount(params, from, phx_socket) do
     %{
       "r" => [route, route_params]
@@ -113,9 +120,7 @@ defmodule Phoenix.DataView.Channel do
     tree = state.view.__tracked__render__(state.socket.assigns)
 
     {ops, tracked_state} = Tree.render(tree, tracked_state)
-    IO.inspect(ops)
     {encoded_ops, json_encoder} = Encoding.JSON.format(ops, json_encoder)
-    IO.inspect encoded_ops
 
     state = %{state | tracked_state: tracked_state, json_encoder: json_encoder}
 
