@@ -82,6 +82,9 @@ export default class JSONEncoding {
         if (typeof body == 'string') {
             return body;
         }
+        if (typeof body == 'number') {
+            return body;
+        }
         if (body === true || body == false) {
             return body;
         }
