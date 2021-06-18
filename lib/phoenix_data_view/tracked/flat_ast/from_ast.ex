@@ -254,6 +254,11 @@ defmodule Phoenix.DataView.Tracked.FlatAst.FromAst do
     {lit_id, scope}
   end
 
+  def from_expr(num, scope, out) when is_number(num) do
+    lit_id = PDAst.add_literal(out, num)
+    {lit_id, scope}
+  end
+
   def from_expr({function, opts, args} = a, scope, out) when is_atom(function) do
     {function_expr, scope} = from_expr(function, scope, out)
 
