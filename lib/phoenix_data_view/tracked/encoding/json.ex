@@ -1,6 +1,5 @@
 defmodule Phoenix.DataView.Tracked.Encoding.JSON do
   alias Phoenix.DataView.Tracked.Tree
-  alias Phoenix.DataView.Tracked.Render
   alias Phoenix.DataView.Tracked.Aliases
 
   @op_render 0
@@ -55,8 +54,8 @@ defmodule Phoenix.DataView.Tracked.Encoding.JSON do
     {out, state}
   end
 
-  def format_patch(:abc, state) do
-    true = false
+  def format_patch(nil, _state) do
+    raise "unimpl"
   end
 
   def escape_fragment(%Tree.Ref{} = ref, state) do

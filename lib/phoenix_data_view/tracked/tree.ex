@@ -1,8 +1,6 @@
 defmodule Phoenix.DataView.Tracked.Tree do
-  alias Phoenix.DataView.Tracked.Tree
   alias Phoenix.DataView.Tracked.Diff
   alias Phoenix.DataView.Tracked.Render
-  alias Phoenix.DataView.Tracked.Encoding
 
   defstruct render: Render.new(),
             diff: Diff.new()

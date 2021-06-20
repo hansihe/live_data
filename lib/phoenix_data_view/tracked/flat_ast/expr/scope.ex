@@ -15,7 +15,8 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Expr.Scope do
 
   def new(exprs, location \\ nil) do
     %__MODULE__{
-      exprs: exprs
+      exprs: exprs,
+      location: location
     }
   end
 end

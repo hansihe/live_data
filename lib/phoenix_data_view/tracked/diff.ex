@@ -90,7 +90,7 @@ defmodule Phoenix.DataView.Tracked.Diff do
   def diff_keys([lh | _lt] = ll, [rh | rt], old, new, acc) when lh > rh do
     # Item in new but not in old, add key.
     value = Map.fetch!(new, rh)
-    acc = [{:add, rh, value}]
+    acc = [{:add, rh, value} | acc]
     diff_keys(ll, rt, old, new, acc)
   end
   def diff_keys([lh | lt], [], old, new, acc) do
@@ -101,7 +101,7 @@ defmodule Phoenix.DataView.Tracked.Diff do
   def diff_keys([], [rh | rt], old, new, acc) do
     # Remainder case for right list, add key.
     value = Map.fetch!(new, rh)
-    acc = [{:add, rh, value}]
+    acc = [{:add, rh, value} | acc]
     diff_keys([], rt, old, new, acc)
   end
   def diff_keys([], [], _old, _new, acc) do

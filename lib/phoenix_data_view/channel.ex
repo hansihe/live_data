@@ -6,12 +6,8 @@ defmodule Phoenix.DataView.Channel do
 
   alias Phoenix.Socket.Message
   alias Phoenix.DataView.Socket
-  alias Phoenix.DataView.Tracked.Diff
-  alias Phoenix.DataView.Tracked.Render
   alias Phoenix.DataView.Tracked.Tree
   alias Phoenix.DataView.Tracked.Encoding
-
-  @prefix :phoenix
 
   defstruct socket: nil,
             view: nil,
@@ -79,11 +75,11 @@ defmodule Phoenix.DataView.Channel do
     end
   end
 
-  defp mount_view(view_module, view_opts, route_params, params, from, phx_socket) do
+  defp mount_view(view_module, _view_opts, _route_params, params, from, phx_socket) do
     %Phoenix.Socket{
       endpoint: endpoint,
       transport_pid: transport_pid,
-      handler: router
+      #handler: router
     } = phx_socket
 
     Process.monitor(transport_pid)

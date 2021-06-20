@@ -103,7 +103,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst do
     {:literal, Map.fetch!(ast.literals, id)}
   end
 
-  def get(ast, {:expr_bind, _eid, _selector} = id) do
+  def get(_ast, {:expr_bind, _eid, _selector} = id) do
     id
   end
 end

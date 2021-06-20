@@ -1,26 +1,30 @@
 defmodule Phoenix.DataView.Tracked.Dummy do
+
+  defp make_tracked_fn_atom_ast(name) when is_atom(name) do
+    atom_str = "__tracked__#{Atom.to_string(name)}__"
+    String.to_atom(atom_str)
+  end
+
   defmacro track(call) do
-    module = __CALLER__.module
-
     req =
-      case Macro.decompose_call(call) do
-        {^module, _fun, _args} ->
-          []
+      case call do
+        {local_fun, opts, args} when is_atom(local_fun) ->
+          tracked_fn = make_tracked_fn_atom_ast(local_fun)
+          {tracked_fn, opts, args}
 
-        {{:__MODULE__, _opts, nil}, _fun, _args} ->
-          []
-
-        {module, _fun, _args} ->
-          quote do: require unquote(module)
+        {{:., path_opts, [module, fun_name]}, opts, args} when is_atom(fun_name) ->
+          tracked_fn = make_tracked_fn_atom_ast(fun_name)
+          {{:., path_opts, [module, tracked_fn]}, opts, args}
 
         _ ->
-          []
+          raise CompileError,
+            file: __CALLER__.file,
+            line: __CALLER__.line,
+            description: "tracked macro must directly surround function call"
       end
 
-      #unquote(req)
-
     quote do
-      unquote(__MODULE__).track_stub(unquote(call))
+      unquote(__MODULE__).track_stub(unquote(req))
     end
   end
 

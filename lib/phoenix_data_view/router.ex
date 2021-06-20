@@ -110,7 +110,7 @@ defmodule Phoenix.DataView.Router do
 
     data_view_defs =
       for {route, module, opts} <- data_views do
-        defdataview(env.module, route, module, opts)
+        defdataview(route, module, opts)
       end
 
     quote do
@@ -139,7 +139,7 @@ defmodule Phoenix.DataView.Router do
     end
   end
 
-  defp defdataview(router_module, route, data_view_module, opts) do
+  defp defdataview(route, data_view_module, opts) do
     quote do
       def __data_view__(unquote(route)), do: unquote({data_view_module, Macro.escape(opts)})
     end

@@ -12,7 +12,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.FromAst do
 
     expr_id = PDAst.add_expr(out)
 
-    fun = Expr.Fn.new(num_args, first_clause_opts)
+    fun = Expr.Fn.new(num_args, first_clause_location)
     scope = %{}
 
     fun =
@@ -51,7 +51,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.FromAst do
 
   # def clause_body()
 
-  def from_pattern({name, _opts, ctx} = var, binds, scope, out)
+  def from_pattern({name, _opts, ctx} = var, binds, _scope, out)
       when is_atom(name) and is_atom(ctx) do
     processed = process_var(var)
     pattern_id = PDAst.add_pattern(out, {:bind, processed})
@@ -222,12 +222,26 @@ defmodule Phoenix.DataView.Tracked.FlatAst.FromAst do
           {{:filter, expr_id}, scope}
       end)
 
-    {body_expr, scope} = from_expr(Keyword.fetch!(meta_items, :do), scope, out)
+    {body_expr, _scope} = from_expr(Keyword.fetch!(meta_items, :do), scope, out)
 
     location = make_location(opts)
     :ok = PDAst.set_expr(out, expr_id, Expr.For.new(item_exprs, into_expr, body_expr, location))
 
     {expr_id, outer_scope}
+  end
+
+  def from_expr({:{}, opts, elems}, scope, out) do
+    {exprs, scope} = Enum.map_reduce(elems, scope, &from_expr(&1, &2, out))
+    location = make_location(opts)
+    expr_id = PDAst.add_expr(out, Expr.MakeTuple.new(exprs, location))
+    {expr_id, scope}
+  end
+
+  def from_expr(tup, scope, out) when is_tuple(tup) and tuple_size(tup) != 3 do
+    tup_list = Tuple.to_list(tup)
+    {exprs, scope} = Enum.map_reduce(tup_list, scope, &from_expr(&1, &2, out))
+    expr_id = PDAst.add_expr(out, Expr.MakeTuple.new(exprs))
+    {expr_id, scope}
   end
 
   def from_expr([head | tail], scope, out) do
@@ -259,7 +273,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.FromAst do
     {lit_id, scope}
   end
 
-  def from_expr({function, opts, args} = a, scope, out) when is_atom(function) do
+  def from_expr({function, opts, args}, scope, out) when is_atom(function) do
     {function_expr, scope} = from_expr(function, scope, out)
 
     {arg_exprs, scope} = Enum.map_reduce(args, scope, &from_expr(&1, &2, out))
@@ -295,6 +309,10 @@ defmodule Phoenix.DataView.Tracked.FlatAst.FromAst do
     {expr_id, scope}
   end
 
+  def from_expr(_expr, _scope, _out) do
+    raise "unhandled clause"
+  end
+
   def handle_patterns(patterns, scope, out) do
     args_pats = Enum.map(patterns, &from_pattern(&1, [], scope, out))
     patterns = Enum.map(args_pats, fn {_binds, pat} -> pat end)
@@ -313,11 +331,6 @@ defmodule Phoenix.DataView.Tracked.FlatAst.FromAst do
       end)
 
     {pat_var_map, patterns}
-  end
-
-  def from_expr(expr, scope, out) do
-    IO.inspect(expr)
-    true = false
   end
 
   defp process_var({name, opts, ctx}) when is_atom(name) and is_atom(ctx) do

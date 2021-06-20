@@ -1,11 +1,8 @@
 defmodule Phoenix.DataView.Tracked.Compiler do
-  alias Phoenix.DataView.Tracked.Compiler
-  alias Phoenix.DataView.Tracked.Compiler2
-  alias Phoenix.DataView.Tracked.Dummy
   alias Phoenix.DataView.Tracked.FlatAst
   alias Phoenix.DataView.Tracked.Util
 
-  def compile(module, {name, arity} = fun, kind, meta, clauses) do
+  def compile(module, {name, arity} = fun, kind, _meta, clauses) do
     full_mfa = {module, name, arity}
 
     meta_fun_name = String.to_atom("__tracked_meta__#{name}__#{arity}__")
@@ -32,7 +29,7 @@ defmodule Phoenix.DataView.Tracked.Compiler do
 
     expr = FlatAst.ToAst.to_expr(new_ast, pretty: true)
     tracked_defs = Util.fn_to_defs(expr, tracked_fun_name)
-    IO.puts(Macro.to_string(tracked_defs))
+    #IO.puts(Macro.to_string(tracked_defs))
 
     meta_fun_ast =
       quote do
@@ -48,7 +45,7 @@ defmodule Phoenix.DataView.Tracked.Compiler do
 
   # Passthrough function
 
-  def make_normal_fun(kind, {name, arity}, clauses) do
+  def make_normal_fun(kind, {name, _arity}, clauses) do
     clauses
     |> Enum.map(fn {opts, args, [], body} ->
       inner = [
@@ -63,68 +60,68 @@ defmodule Phoenix.DataView.Tracked.Compiler do
 
   # IDs function
 
-  def make_ids_fun(module, kind, name, {orig_name, orig_arity}, ids_state) do
-    ids_expr =
-      ids_state.fragment_lines
-      |> Enum.with_index()
-      |> Enum.reduce(
-        quote do
-          ids
-        end,
-        fn {{id, line}, idx}, acc ->
-          quote do
-            Map.put(unquote(acc), {scope_id, unquote(id)}, %{
-              num: counter + unquote(idx),
-              line: unquote(line)
-            })
-          end
-        end
-      )
+  #def make_ids_fun(module, kind, name, {orig_name, orig_arity}, ids_state) do
+  #  ids_expr =
+  #    ids_state.fragment_lines
+  #    |> Enum.with_index()
+  #    |> Enum.reduce(
+  #      quote do
+  #        ids
+  #      end,
+  #      fn {{id, line}, idx}, acc ->
+  #        quote do
+  #          Map.put(unquote(acc), {scope_id, unquote(id)}, %{
+  #            num: counter + unquote(idx),
+  #            line: unquote(line)
+  #          })
+  #        end
+  #      end
+  #    )
 
-    tracked_calls_expr =
-      ids_state.tracked_calls
-      |> Enum.reverse()
-      |> Enum.reduce(
-        quote do
-          state
-        end,
-        fn {module, name, arity}, acc ->
-          ids_fun_name = String.to_atom("__tracked_ids_#{name}_#{arity}__")
+  #  tracked_calls_expr =
+  #    ids_state.tracked_calls
+  #    |> Enum.reverse()
+  #    |> Enum.reduce(
+  #      quote do
+  #        state
+  #      end,
+  #      fn {module, name, arity}, acc ->
+  #        ids_fun_name = String.to_atom("__tracked_ids_#{name}_#{arity}__")
 
-          quote do
-            unquote(ids_fun_name)(unquote(acc))
-          end
-        end
-      )
+  #        quote do
+  #          unquote(ids_fun_name)(unquote(acc))
+  #        end
+  #      end
+  #    )
 
-    num_ids = ids_state.counter
+  #  num_ids = ids_state.counter
 
-    quote do
-      unquote(kind)(unquote(name)(state)) do
-        scope_id = {unquote(module), unquote(orig_name), unquote(orig_arity)}
+  #  quote do
+  #    unquote(kind)(unquote(name)(state)) do
+  #      scope_id = {unquote(module), unquote(orig_name), unquote(orig_arity)}
 
-        if Map.has_key?(state.visited, scope_id) do
-          state
-        else
-          %{ids: ids, visited: visited, counter: counter} = state
-          visited = Map.put(visited, scope_id, nil)
+  #      if Map.has_key?(state.visited, scope_id) do
+  #        state
+  #      else
+  #        %{ids: ids, visited: visited, counter: counter} = state
+  #        visited = Map.put(visited, scope_id, nil)
 
-          ids = unquote(ids_expr)
+  #        ids = unquote(ids_expr)
 
-          state = %{
-            state
-            | ids: ids,
-              visited: visited,
-              counter: counter + unquote(num_ids)
-          }
+  #        state = %{
+  #          state
+  #          | ids: ids,
+  #            visited: visited,
+  #            counter: counter + unquote(num_ids)
+  #        }
 
-          state = unquote(tracked_calls_expr)
+  #        state = unquote(tracked_calls_expr)
 
-          state
-        end
-      end
-    end
-  end
+  #        state
+  #      end
+  #    end
+  #  end
+  #end
 
   # Terminal macros
 
@@ -144,49 +141,49 @@ defmodule Phoenix.DataView.Tracked.Compiler do
     {mfa_to_tracked(name), arity}
   end
 
-  defmacro keyed_stub(key, do: body) do
-    do_keyed(key, body, __CALLER__)
-  end
+  #defmacro keyed_stub(key, do: body) do
+  #  do_keyed(key, body, __CALLER__)
+  #end
 
-  defmacro keyed_stub(key, expr) do
-    do_keyed(key, expr, __CALLER__)
-  end
+  #defmacro keyed_stub(key, expr) do
+  #  do_keyed(key, expr, __CALLER__)
+  #end
 
-  defp do_keyed(key, body, env) do
-    {current_vars, _} = env.current_vars
+  #defp do_keyed(key, body, env) do
+  #  {current_vars, _} = env.current_vars
 
-    pre = fn
-      {name, _opts, context} = var, acc
-      when is_atom(name) and is_map_key(current_vars, {name, context}) ->
-        {var, Map.put(acc, {name, context}, nil)}
+  #  pre = fn
+  #    {name, _opts, context} = var, acc
+  #    when is_atom(name) and is_map_key(current_vars, {name, context}) ->
+  #      {var, Map.put(acc, {name, context}, nil)}
 
-      node, acc ->
-        {node, acc}
-    end
+  #    node, acc ->
+  #      {node, acc}
+  #  end
 
-    post = fn
-      _node, acc ->
-        {nil, acc}
-    end
+  #  post = fn
+  #    _node, acc ->
+  #      {nil, acc}
+  #  end
 
-    {_node, active_vars} = Macro.traverse(body, %{}, pre, post)
+  #  {_node, active_vars} = Macro.traverse(body, %{}, pre, post)
 
-    active_vars_expr =
-      active_vars
-      |> Map.keys()
-      |> Enum.map(fn {name, ctx} -> {name, [], ctx} end)
+  #  active_vars_expr =
+  #    active_vars
+  #    |> Map.keys()
+  #    |> Enum.map(fn {name, ctx} -> {name, [], ctx} end)
 
-    quote do
-      %Phoenix.DataView.Tracked.Tree.Keyed{
-        id: {unquote(context_var), unquote(fragment_var)},
-        key: unquote(key),
-        escapes: unquote(active_vars_expr),
-        render: fn ->
-          unquote(body)
-        end
-      }
-    end
-  end
+  #  quote do
+  #    %Phoenix.DataView.Tracked.Tree.Keyed{
+  #      id: {unquote(context_var), unquote(fragment_var)},
+  #      key: unquote(key),
+  #      escapes: unquote(active_vars_expr),
+  #      render: fn ->
+  #        unquote(body)
+  #      end
+  #    }
+  #  end
+  #end
 
   # Utils
   

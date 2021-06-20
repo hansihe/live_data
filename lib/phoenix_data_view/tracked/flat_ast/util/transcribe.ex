@@ -21,7 +21,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Util.Transcribe do
     {new_expr_id, map}
   end
 
-  def transcribe(%Expr.Scope{exprs: exprs}, expr_id, data, map, backup_resolve, out) do
+  def transcribe(%Expr.Scope{exprs: exprs}, _expr_id, data, map, backup_resolve, out) do
     {new_exprs, _map} =
       Enum.map_reduce(exprs, map, fn expr, map ->
         transcribe(expr, data, map, backup_resolve, out)
@@ -54,7 +54,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Util.Transcribe do
 
   def transcribe_maybe_scope(expr_id, data, map, backup_resolve, out) do
     case FlatAst.get(data.ast, expr_id) do
-      %Expr.Scope{} = expr ->
+      %Expr.Scope{} ->
         {new_expr_id, _map} = transcribe(expr_id, data, map, backup_resolve, out)
         new_expr_id
 

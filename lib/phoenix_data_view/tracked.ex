@@ -48,7 +48,7 @@ defmodule Phoenix.DataView.Tracked do
     end
   end
 
-  defp define(module, {name, arity} = fun) do
+  defp define(module, {_name, _arity} = fun) do
     {:v1, kind, meta, clauses} = Tracked.Module.get_definition(module, fun)
 
     compiled = Compiler.compile(module, fun, kind, meta, clauses)

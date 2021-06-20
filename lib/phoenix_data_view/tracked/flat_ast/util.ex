@@ -58,7 +58,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Util do
   """
   def traverse_post(ast, id, expr \\ nil, acc, fun)
 
-  def traverse_post(ast, id, expr, acc, fun) do
+  def traverse_post(ast, id, nil, acc, fun) do
     expr = FlatAst.get(ast, id)
     traverse(ast, id, expr, acc, fun)
   end
@@ -87,7 +87,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Util do
     {new_expr, acc}
   end
 
-  def transform_expr(%Expr.Block{exprs: exprs}, acc, fun) do
+  def transform_expr(%Expr.Block{exprs: exprs} = expr, acc, fun) do
     num_items = Enum.count(exprs)
 
     {new_exprs, acc} =
@@ -97,11 +97,11 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Util do
         fun.(:value, {idx, idx == num_items - 1}, expr, acc)
       end)
 
-    new_expr = %Expr.Block{exprs: new_exprs}
+    new_expr = %{expr | exprs: new_exprs}
     {new_expr, acc}
   end
 
-  def transform_expr(%Expr.Scope{exprs: exprs}, acc, fun) do
+  def transform_expr(%Expr.Scope{exprs: exprs} = expr, acc, fun) do
     num_items = Enum.count(exprs)
 
     {new_exprs, acc} =
@@ -111,7 +111,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Util do
         fun.(:value, {idx, idx == num_items - 1}, expr, acc)
       end)
 
-    new_expr = %Expr.Scope{exprs: new_exprs}
+    new_expr = %{expr | exprs: new_exprs}
     {new_expr, acc}
   end
 
@@ -213,7 +213,8 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Util do
 
     {new_inner, acc} = fun.(:scope, :inner, expr.inner, acc)
 
-    new_expr = %Expr.For{
+    new_expr = %{
+      expr |
       items: new_items,
       into: new_into,
       inner: new_inner
@@ -237,10 +238,23 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Util do
         {{new_key, new_val}, acc}
       end)
 
-    new_expr = %Expr.MakeMap{
+    new_expr = %{
+      expr |
       prev: new_prev,
       kvs: new_kvs
     }
+    {new_expr, acc}
+  end
+
+  def transform_expr(%Expr.MakeTuple{} = expr, acc, fun) do
+    {new_elems, acc} =
+      expr.elements
+      |> Enum.with_index()
+      |> Enum.map_reduce(acc, fn {elem, idx}, acc ->
+        fun.(:value, idx, elem, acc)
+      end)
+
+    new_expr = %{ expr | elements: new_elems }
     {new_expr, acc}
   end
 

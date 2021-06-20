@@ -73,8 +73,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.PDAst do
   defp assert_ref(ref) do
     pd_ref = Process.get(:ast_tok)
     if ref != pd_ref do
-      IO.inspect {:invalid_ref, ref, pd_ref}
-      true = false
+      raise "invalid ref (#{ref} != #{pd_ref})"
     end
   end
 

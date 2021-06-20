@@ -10,7 +10,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
 
     generated_bindings = %{}
     {expr, _gen} = to_expr(ast.root, generated_bindings, ast, false, opts)
-    IO.inspect(expr)
+    expr
   end
 
   def to_expr(expr_id, gen, ast, false, opts) do
@@ -40,13 +40,13 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
     to_expr_inner(item, expr_id, gen, ast, true, opts)
   end
 
-  def to_expr_inner({:expr_bind, _eid, _selector} = bind, _expr_id, gen, ast, scope_mode, opts) do
+  def to_expr_inner({:expr_bind, _eid, _selector} = bind, _expr_id, gen, ast, _scope_mode, _opts) do
     var = Map.get(ast.variables, bind) || Map.fetch!(gen, bind)
     var_ast = var_to_expr(var, gen)
     {var_ast, gen}
   end
 
-  def to_expr_inner({:literal, literal}, _expr_id, gen, ast, scope_mode, opts) do
+  def to_expr_inner({:literal, literal}, _expr_id, gen, _ast, _scope_mode, _opts) do
     {literal, gen}
   end
 
@@ -72,12 +72,12 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
 
         {body_ast, gen} = to_expr(clause.body, gen, ast, scope_mode, opts)
 
-        opts = make_opts(location: clause.location)
-        {{:->, opts, [patterns_ast, body_ast]}, gen}
+        ast_opts = make_opts(location: clause.location)
+        {{:->, ast_opts, [patterns_ast, body_ast]}, gen}
       end)
 
-    opts = make_opts(location: expr.location)
-    {{:fn, opts, clauses}, gen}
+    ast_opts = make_opts(location: expr.location)
+    {{:fn, ast_opts, clauses}, gen}
   end
 
   def to_expr_inner(
@@ -106,8 +106,8 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
       ) do
     {inner, gen} = Enum.map_reduce(exprs, gen, &to_expr(&1, &2, ast, false, opts))
 
-    opts = make_opts(location: location)
-    {{:__block__, opts, inner}, gen}
+    ast_opts = make_opts(location: location)
+    {{:__block__, ast_opts, inner}, gen}
   end
 
   def to_expr_inner(
@@ -120,8 +120,8 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
       ) do
     {inner, gen} = Enum.map_reduce(exprs, gen, &to_expr(&1, &2, ast, true, opts))
 
-    opts = make_opts(location: location)
-    {{:__block__, opts, inner}, gen}
+    ast_opts = make_opts(location: location)
+    {{:__block__, ast_opts, inner}, gen}
   end
 
   def to_expr_inner(
@@ -141,8 +141,8 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
         Map.put(gen, sub, var)
       end)
 
-    opts = make_opts(location: location)
-    {{:=, opts, [pattern_ast, rhs_ast]}, gen}
+    ast_opts = make_opts(location: location)
+    {{:=, ast_opts, [pattern_ast, rhs_ast]}, gen}
   end
 
   def to_expr_inner(%Expr.MakeMap{prev: nil, kvs: kvs, location: location}, _expr_id, gen, ast, scope_mode, opts) do
@@ -153,8 +153,8 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
         {{key_ast, value_ast}, gen}
       end)
 
-    opts = make_opts(location: location)
-    {{:%{}, opts, kvs_ast}, gen}
+    ast_opts = make_opts(location: location)
+    {{:%{}, ast_opts, kvs_ast}, gen}
   end
 
   def to_expr_inner(%Expr.MakeCons{head: head, tail: tail}, _expr_id, gen, ast, scope_mode, opts) do
@@ -188,22 +188,22 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
 
     {body_ast, gen} = to_expr(expr.inner, gen, ast, scope_mode, opts)
 
-    opts = make_opts(location: expr.location)
-    {{:for, opts, Enum.concat([items, [[do: body_ast]]])}, gen}
+    ast_opts = make_opts(location: expr.location)
+    {{:for, ast_opts, Enum.concat([items, [[do: body_ast]]])}, gen}
   end
 
   def to_expr_inner(%Expr.AccessField{} = expr, _expr_id, gen, ast, scope_mode, opts) do
     {top_expr, gen} = to_expr(expr.top, gen, ast, scope_mode, opts)
     field = expr.field
 
-    opts = make_opts(location: expr.location)
-    {{{:., opts, [top_expr, field]}, [no_parens: true], []}, gen}
+    ast_opts = make_opts(location: expr.location)
+    {{{:., ast_opts, [top_expr, field]}, [no_parens: true], []}, gen}
   end
 
-  def to_expr_inner(%Expr.Var{ref_expr: ref_expr, location: location}, _expr_id, gen, ast, scope_mode, opts) do
+  def to_expr_inner(%Expr.Var{ref_expr: ref_expr, location: location}, _expr_id, gen, ast, _scope_mode, _opts) do
     var = Map.fetch!(ast.variables, ref_expr)
-    opts = make_opts(location: location)
-    var_ast = var_to_expr(var, gen, opts)
+    ast_opts = make_opts(location: location)
+    var_ast = var_to_expr(var, gen, ast_opts)
     {var_ast, gen}
   end
 
@@ -212,8 +212,8 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
 
     {args_ast, gen} = Enum.map_reduce(expr.args, gen, &to_expr(&1, &2, ast, scope_mode, opts))
 
-    opts = make_opts(location: expr.location)
-    {{function_ast, opts, args_ast}, gen}
+    ast_opts = make_opts(location: expr.location)
+    {{function_ast, ast_opts, args_ast}, gen}
   end
 
   def to_expr_inner(%Expr.CallMF{} = expr, _expr_id, gen, ast, scope_mode, opts) do
@@ -222,12 +222,12 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
 
     {args_ast, gen} = Enum.map_reduce(expr.args, gen, &to_expr(&1, &2, ast, scope_mode, opts))
 
-    opts = make_opts(location: expr.location)
-    {{{:., [], [module_ast, function_ast]}, opts, args_ast}, gen}
+    ast_opts = make_opts(location: expr.location)
+    {{{:., [], [module_ast, function_ast]}, ast_opts, args_ast}, gen}
   end
 
   def to_expr_inner(
-        %Expr.MakeStatic{key: nil, slots: [inner], static: %Slot{num: 0}} = expr,
+        %Expr.MakeStatic{key: nil, slots: [inner], static: %Slot{num: 0}},
         _expr_id,
         gen,
         ast,
@@ -273,37 +273,6 @@ defmodule Phoenix.DataView.Tracked.FlatAst.ToAst do
 
     {expr, gen}
   end
-
-  # def to_expr_inner(%Expr.MakeStatic{} = expr, _expr_id, gen, ast, scope_mode, opts) do
-  #  {slots, gen} = Enum.map_reduce(expr.slots, gen, &to_expr(&1, &2, ast, scope_mode, opts))
-
-  #  {key, gen} =
-  #    if expr.key do
-  #      {key_ast, gen} = to_expr(expr.key, gen, ast, scope_mode, opts)
-  #      key_ast = quote do
-  #        {:ok, unquote(key_ast)}
-  #      end
-
-  #      {key_ast, gen}
-  #    else
-  #      {nil, gen}
-  #    end
-
-  #  id_expr = Macro.escape({expr.mfa, expr.static_id})
-  #  template_expr = Macro.escape(expr.static)
-
-  #  expr =
-  #    quote do
-  #      %Phoenix.DataView.Tracked.Tree.Static{
-  #        id: unquote(id_expr),
-  #        template: unquote(template_expr),
-  #        data: fn -> unquote(slots) end,
-  #        key: unquote(key)
-  #      }
-  #    end
-
-  #  {expr, gen}
-  # end
 
   def to_pattern(pattern_id, gen, ast, opts) do
     pattern = FlatAst.get(ast, pattern_id)

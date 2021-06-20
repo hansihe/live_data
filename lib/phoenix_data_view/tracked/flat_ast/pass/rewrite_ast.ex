@@ -9,15 +9,15 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
   alias Phoenix.DataView.Tracked.Tree.Slot
 
   def rewrite(ast, full_mfa, nesting_set) do
-    scopes =
-      FlatAst.Util.traverse(ast, ast.root, %{}, fn
-        id, %Expr.Scope{exprs: exprs}, scopes ->
-          scopes = Map.put(scopes, id, MapSet.new(exprs))
-          {:continue, scopes}
+    #scopes =
+    #  FlatAst.Util.traverse(ast, ast.root, %{}, fn
+    #    id, %Expr.Scope{exprs: exprs}, scopes ->
+    #      scopes = Map.put(scopes, id, MapSet.new(exprs))
+    #      {:continue, scopes}
 
-        _id, _expr, scopes ->
-          {:continue, scopes}
-      end)
+    #    _id, _expr, scopes ->
+    #      {:continue, scopes}
+    #  end)
 
     {:ok, out} = PDAst.init()
     new_root = PDAst.add_expr(out)
@@ -29,7 +29,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
       Enum.map_reduce(fn_expr.clauses, %{}, fn %Expr.Fn.Clause{} = clause, statics_acc ->
         new_guard =
           if clause.guard do
-            true = false
+            raise "unimpl"
             # transcribe(guard, ast, out)
           end
 
@@ -38,7 +38,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
             %{statics: %{}, traversed: MapSet.new(), dependencies: MapSet.new()}
           end)
 
-        rewrite_root = rewrite_make_structure(clause.body, ast, state)
+        _rewrite_root = rewrite_make_structure(clause.body, ast, state)
 
         %{statics: statics, traversed: traversed, dependencies: dependencies} =
           Agent.get(state, fn state -> state end)
@@ -97,7 +97,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
 
   Traversed expressions are also registered for use by the later passes.
   """
-  def rewrite_make_structure(expr_id, key_expr \\ nil, ast, state) do
+  def rewrite_make_structure(expr_id, ast, state) do
     if state_static_fetch(state, expr_id) != :error do
       expr_id
     else
@@ -128,7 +128,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
     rewrite_make_structure_rec(expr, expr_id, ast, static_id, state)
   end
 
-  def rewrite_make_structure_rec(%Expr.Scope{exprs: exprs}, expr_id, ast, static_id, state) do
+  def rewrite_make_structure_rec(%Expr.Scope{exprs: exprs}, _expr_id, ast, static_id, state) do
     result_expr = List.last(exprs)
     rewrite_make_structure_rec(result_expr, ast, static_id, state)
   end
@@ -159,10 +159,8 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
         rewrite_make_structure_rec(value_expr, ast, static_id, state)
 
       {{:literal, Phoenix.DataView.Tracked.Dummy}, {:literal, :track_stub}} ->
-        # TODO transform call
-
         [call_expr_id] = expr.args
-        call_expr = %Expr.CallMF{} = FlatAst.get(ast, call_expr_id)
+        _call_expr = %Expr.CallMF{} = FlatAst.get(ast, call_expr_id)
 
         :ok = state_static_add_dependencies(state, [call_expr_id])
 
@@ -174,7 +172,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
     end
   end
 
-  def rewrite_make_structure_rec(%Expr.MakeMap{prev: nil} = expr, expr_id, ast, static_id, state) do
+  def rewrite_make_structure_rec(%Expr.MakeMap{prev: nil} = expr, _expr_id, ast, static_id, state) do
     kvs_static =
       Enum.map(expr.kvs, fn {key, val} ->
         key_rewrite = rewrite_make_structure_rec(key, ast, static_id, state)
@@ -186,11 +184,18 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
     {:make_map, nil, kvs_static}
   end
 
-  def rewrite_make_structure_rec({:literal, lit}, expr_id, ast, static_id, state) do
+  def rewrite_make_structure_rec(%Expr.MakeTuple{elements: elems}, _expr_id, ast, static_id, state) do
+    elems_static = Enum.map(elems, &rewrite_make_structure_rec(
+          &1, ast, static_id, state))
+
+    {:make_tuple, elems_static}
+  end
+
+  def rewrite_make_structure_rec({:literal, lit}, _expr_id, _ast, _static_id, _state) do
     {:literal, lit}
   end
 
-  def rewrite_make_structure_rec(_expr, expr_id, ast, static_id, state) do
+  def rewrite_make_structure_rec(_expr, expr_id, _ast, static_id, state) do
     :ok = state_static_add_dependencies(state, [expr_id])
     state_static_add_slot(state, static_id, expr_id)
   end
@@ -257,7 +262,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
     end
   end
 
-  def expand_dependencies_inner([], original, visited, data, _ast) do
+  def expand_dependencies_inner([], _original, visited, _data, _ast) do
     visited
   end
 
@@ -314,7 +319,7 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
       |> Enum.filter(&MapSet.member?(data.traversed, &1))
       |> Enum.map_reduce(rewritten, &rewrite_scope_expr(&1, data, &2, transcribed, out))
 
-    {rewritten_result, rewritten} = rewrite_scope_expr(expr_id, data, rewritten, transcribed, out)
+    {rewritten_result, _rewritten} = rewrite_scope_expr(expr_id, data, rewritten, transcribed, out)
 
     scope_exprs = Util.recursive_flatten([transcribed_exprs, rewritten_exprs, rewritten_result])
 
@@ -329,12 +334,12 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
         expr = FlatAst.get(data.ast, expr_id)
         rewrite_scope_expr(expr, expr_id, data, rewritten, transcribed, out)
 
-      {:ok, {:unfinished, _ns, [ret_expr_id], _key}} ->
+      {:ok, {:unfinished, _ns, [_ret_expr_id], _key}} ->
         {[], rewritten}
 
       # Special case, the whole static is useless.
-      {:ok, {:finished, %Slot{num: 0}, [inner_expr_id], nil}} ->
-        true = false
+      {:ok, {:finished, %Slot{num: 0}, [_inner_expr_id], nil}} ->
+        raise "unimpl"
 
       # rewritten = Map.put(rewritten, expr_id, inner_expr_id)
       # {inner_expr_id, rewritten}
@@ -388,13 +393,13 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
     {new_expr_id, rewritten}
   end
 
-  def rewrite_scope_resolve({:expr_bind, eid, selector}, data, rewritten, transcribed, out) do
+  def rewrite_scope_resolve({:expr_bind, eid, selector}, _data, rewritten, _transcribed, _out) do
     expr_id = {:expr, eid}
     {:expr, new_eid} = Map.fetch!(rewritten, expr_id)
     {:expr_bind, new_eid, selector}
   end
 
-  def rewrite_scope_resolve({:literal, _lit_id} = literal_id, data, rewritten, transcribed, out) do
+  def rewrite_scope_resolve({:literal, _lit_id} = literal_id, data, _rewritten, _transcribed, out) do
     {:literal, literal} = FlatAst.get(data.ast, literal_id)
     PDAst.add_literal(out, literal)
   end
@@ -423,8 +428,8 @@ defmodule Phoenix.DataView.Tracked.FlatAst.Pass.RewriteAst do
 
   def state_static_set_key(state, static_id, expr_id) do
     Agent.update(state, fn state ->
-      update_in(state.statics[static_id], fn {:unfinished, _nid, slots, nil} ->
-        {:unfinished, _nid, slots, expr_id}
+      update_in(state.statics[static_id], fn {:unfinished, nid, slots, nil} ->
+        {:unfinished, nid, slots, expr_id}
       end)
     end)
   end

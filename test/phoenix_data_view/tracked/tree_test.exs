@@ -17,7 +17,7 @@ defmodule Phoenix.DataView.Tracked.TreeTest do
             %{
               posts:
                 for post <- category.posts do
-                  keyed(post.id, track(__tracked__render_post__(post)))
+                  keyed(post.id, track(render_post(post)))
                 end
             }
           end
@@ -33,8 +33,16 @@ defmodule Phoenix.DataView.Tracked.TreeTest do
     }
   end
 
+  deft woop(assigns) do
+    IO.inspect(assigns, label: :assigns_in_render)
+    %{
+      foo: 1
+    }
+  end
+
   use FlutterView
 
+  @tag :skip
   test "yay" do
     assigns = %{
       categories: [
@@ -159,6 +167,7 @@ defmodule Phoenix.DataView.Tracked.TreeTest do
   #  }
   # end
 
+  @tag :skip
   test "foobar" do
     state = %{ids: %{}, visited: %{}, counter: 0}
     #%{ids: keyed_ids} = __tracked_ids_render_1__(state)
