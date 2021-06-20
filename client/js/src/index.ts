@@ -22,8 +22,8 @@ export class Socket {
         this.socket.connect();
     }
 
-    dataView(route: String, initialParams: {}, opts: {} = {}): DataView {
-        return new DataView(route, initialParams, opts, this);
+    dataView(route: String, initialParams: {}, opts: {} = {}): LiveData {
+        return new LiveData(route, initialParams, opts, this);
     }
 
     nextDvCounter(): number {
@@ -60,14 +60,14 @@ export enum RejoinPolicy {
     Persist,
 };
 
-enum DataViewState {
+enum LiveDataState {
     ChannelJoining = "channel_joining",
     Joining = "joining",
     Active = "active",
     Terminal = "terminal",
 };
 
-export class DataView {
+export class LiveData {
     rejoinPolicy: RejoinPolicy;
 
     socket: Socket;
@@ -75,13 +75,13 @@ export class DataView {
     channel: PhxChannel;
     joinPush: PhxPush;
 
-    onState: EventBus<[DataViewState]> = new EventBus();
-    _state: DataViewState = DataViewState.ChannelJoining;
-    set state(state: DataViewState) {
+    onState: EventBus<[LiveDataState]> = new EventBus();
+    _state: LiveDataState = LiveDataState.ChannelJoining;
+    set state(state: LiveDataState) {
         this._state = state;
         this.onState.call(this._state);
     }
-    get state(): DataViewState {
+    get state(): LiveDataState {
         return this._state;
     }
 
@@ -108,8 +108,8 @@ export class DataView {
         this.channel.on("o", (payload: {}) => {
             let rendered = this.encoding.handleMessage(payload["o"]);
 
-            if (this.state == DataViewState.ChannelJoining) {
-                this.state = DataViewState.Active;
+            if (this.state == LiveDataState.ChannelJoining) {
+                this.state = LiveDataState.Active;
             }
 
             if (rendered) {
@@ -123,13 +123,13 @@ export class DataView {
     joinChannel() {
         this.joinPush = this.channel.join();
         this.joinPush.receive("ok", ({messages}) => {
-            this.state = DataViewState.ChannelJoining;
+            this.state = LiveDataState.ChannelJoining;
         });
         this.joinPush.receive("error", ({reason}) => {
-            this.state = DataViewState.Terminal;
+            this.state = LiveDataState.Terminal;
         });
         this.joinPush.receive("timeout", () => {
-            this.state = DataViewState.ChannelJoining;
+            this.state = LiveDataState.ChannelJoining;
         });
     }
 

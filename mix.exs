@@ -1,9 +1,9 @@
-defmodule PhoenixDataView.MixProject do
+defmodule PhoenixLiveData.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :phoenix_data_view,
+      app: :phoenix_live_data,
       version: "0.1.0",
       elixir: "~> 1.10",
       start_permanent: Mix.env() == :prod,
