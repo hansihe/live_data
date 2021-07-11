@@ -48,8 +48,12 @@ class LiveData {
 
   late final PhoenixChannel _channel;
 
-  JSONEncoding encoding = JSONEncoding();
-  late final Stream data;
+  JSONEncoding _encoding = JSONEncoding();
+
+  late final Stream dataStream;
+  dynamic get data {
+    return _encoding.out;
+  }
 
   LiveData(this.socket, this._topic, this._route, this._params) {
     _channel = socket.socket.addChannel(topic: _topic, parameters: {
@@ -57,15 +61,15 @@ class LiveData {
     });
 
     var controller = StreamController();
-    data = controller.stream;
+    dataStream = controller.stream;
 
     _channel.messages.listen((event) {
       if (event.event.value == "o") {
-        if (encoding.handleMessage(event.payload!)) {
-          controller.add(encoding.out);
+        if (_encoding.handleMessage(event.payload!["o"]!)) {
+          controller.add(_encoding.out);
         }
       } else {
-        throw "unhandled event";
+        throw "unhandled event ${event.event.value}";
       }
     });
 

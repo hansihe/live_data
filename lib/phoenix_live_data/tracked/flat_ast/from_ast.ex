@@ -230,6 +230,42 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.FromAst do
     {expr_id, outer_scope}
   end
 
+  def from_expr({:case, opts, [expr, [do: clauses]]}, scope, out) do
+    expr_id = PDAst.add_expr(out)
+
+    {expr, scope} = from_expr(expr, scope, out)
+
+    location = make_location(opts)
+    case_expr = Expr.Case.new(expr, location)
+
+    case_expr =
+      clauses
+      |> Enum.with_index()
+      |> Enum.reduce(case_expr, fn
+        {{:->, clause_opts, [[pattern], body]}, clause_idx}, case_expr ->
+          location = make_location(clause_opts)
+
+          {pat_var_map, [pattern]} = handle_patterns([pattern], scope, out)
+
+          scope =
+            Enum.reduce(pat_var_map, scope, fn {idx, var}, scope ->
+              {:expr, eid} = expr_id
+              sub_expr_id = {:expr_bind, eid, {clause_idx, idx}}
+
+              :ok = PDAst.add_variable(out, var, sub_expr_id)
+
+              Map.put(scope, var, sub_expr_id)
+            end)
+
+          {body_expr, _scope} = from_expr(body, scope, out)
+
+          Expr.Case.add_clause(case_expr, pattern, pat_var_map, nil, body_expr, location)
+      end)
+
+    :ok = PDAst.set_expr(out, expr_id, case_expr)
+    {expr_id, scope}
+  end
+
   def from_expr({:{}, opts, elems}, scope, out) do
     {exprs, scope} = Enum.map_reduce(elems, scope, &from_expr(&1, &2, out))
     location = make_location(opts)

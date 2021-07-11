@@ -11,6 +11,8 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.Normalize do
   alias Phoenix.LiveData.Tracked.FlatAst.Expr
 
   def normalize(ast) do
+    IO.inspect ast
+
     %Expr.Fn{} = expr = FlatAst.get(ast, ast.root)
 
     {new_clauses, ast} =
@@ -37,8 +39,10 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.Normalize do
   end
 
   def flatten_block(expr_id, ast) do
-    {_last_item, block_items, ast} = flatten_block_rec(expr_id, ast)
+    {last_item, block_items, ast} = flatten_block_rec(expr_id, ast)
     block_items = FlatAst.Util.recursive_flatten(block_items)
+
+    # TODO filter useless
 
     {expr_id, ast} = FlatAst.add_expr(ast, Expr.Scope.new(block_items))
     {expr_id, ast}
@@ -68,12 +72,12 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.Normalize do
     {last_expr, block_exprs, ast}
   end
 
-  def flatten_block_rec_inner(%Expr.Var{} = expr, _expr_id, ast) do
-    {expr.ref_expr, [], ast}
+  def flatten_block_rec_inner(%Expr.Var{} = expr, expr_id, ast) do
+    {expr.ref_expr, [expr_id], ast}
   end
 
   def flatten_block_rec_inner({:literal, _lit}, lit_id, ast) do
-    {lit_id, [], ast}
+    {lit_id, [lit_id], ast}
   end
 
   def flatten_block_rec_inner(expr, expr_id, ast) do

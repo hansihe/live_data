@@ -163,6 +163,33 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.ToAst do
     {[{:|, [], [head_ast, tail_ast]}], gen}
   end
 
+  def to_expr_inner(%Expr.Case{} = expr, {:expr, eid}, gen, ast, scope_mode, opts) do
+    {value_ast, gen} = to_expr(expr.value, gen, ast, scope_mode, opts)
+
+    {clauses, gen} =
+      expr.clauses
+      |> Enum.with_index()
+      |> Enum.map_reduce(gen, fn {%Expr.Case.Clause{} = clause, clause_idx}, gen ->
+        {pattern_ast, gen} = to_pattern(clause.pattern, gen, ast, opts)
+
+        gen =
+          Enum.reduce(clause.binds, gen, fn {idx, var}, gen ->
+            sub = {:expr_bind, eid, {clause_idx, idx}}
+            Map.put(gen, sub, var)
+          end)
+
+        nil = clause.guard
+
+        {body_ast, gen} = to_expr(clause.body, gen, ast, scope_mode, opts)
+
+        ast_opts = make_opts(location: clause.location)
+        {{:->, ast_opts, [[pattern_ast], body_ast]}, gen}
+      end)
+
+    ast_opts = make_opts(location: expr.location)
+    {{:case, ast_opts, [value_ast, [do: clauses]]}, gen}
+  end
+
   def to_expr_inner(%Expr.For{} = expr, {:expr, eid}, gen, ast, scope_mode, opts) do
     nil = expr.into
 
@@ -201,7 +228,7 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.ToAst do
   end
 
   def to_expr_inner(%Expr.Var{ref_expr: ref_expr, location: location}, _expr_id, gen, ast, _scope_mode, _opts) do
-    var = Map.fetch!(ast.variables, ref_expr)
+    var = Map.get(ast.variables, ref_expr) || Map.fetch!(gen, ref_expr)
     ast_opts = make_opts(location: location)
     var_ast = var_to_expr(var, gen, ast_opts)
     {var_ast, gen}

@@ -13,8 +13,8 @@ defmodule Phoenix.LiveData.Channel do
             view: nil,
             topic: nil,
             serializer: nil,
-    tracked_state: nil,
-   json_encoder: nil
+            tracked_state: nil,
+            json_encoder: nil
 
   def start_link({endpoint, from}) do
     IO.inspect({endpoint, from})
@@ -78,8 +78,8 @@ defmodule Phoenix.LiveData.Channel do
   defp mount_view(view_module, _view_opts, _route_params, params, from, phx_socket) do
     %Phoenix.Socket{
       endpoint: endpoint,
-      transport_pid: transport_pid,
-      #handler: router
+      transport_pid: transport_pid
+      # handler: router
     } = phx_socket
 
     Process.monitor(transport_pid)
@@ -120,6 +120,7 @@ defmodule Phoenix.LiveData.Channel do
 
     state = %{state | tracked_state: tracked_state, json_encoder: json_encoder}
 
+    IO.inspect encoded_ops
     push(state, "o", %{"o" => encoded_ops})
   end
 

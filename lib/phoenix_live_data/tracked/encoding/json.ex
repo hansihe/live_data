@@ -123,4 +123,15 @@ defmodule Phoenix.LiveData.Tracked.Encoding.JSON do
     end
   end
 
+  def escape_template([head | tail], state) do
+    {head_esc, state} = escape_template(head, state)
+    {tail_esc, state} = escape_template(tail, state)
+
+    {[head_esc | tail_esc], state}
+  end
+
+  def escape_template({:literal, lit}, state) do
+    {lit, state}
+  end
+
 end

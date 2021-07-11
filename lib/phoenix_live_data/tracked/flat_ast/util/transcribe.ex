@@ -11,6 +11,12 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Util.Transcribe do
   This is useful in the case where we have a separate, semantically different
   map of parent transcribed expressions.
   """
+  def transcribe({:literal, _} = lit_id, data, map, backup_resolve, out) do
+    {:literal, lit} = FlatAst.get(data.ast, lit_id)
+    new_lit_id = PDAst.add_literal(out, lit)
+    {new_lit_id, map}
+  end
+
   def transcribe(expr_id, data, map, backup_resolve, out) do
     false = Map.has_key?(map, expr_id)
     expr = FlatAst.get(data.ast, expr_id)
@@ -33,6 +39,10 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Util.Transcribe do
     {new_expr_id, map}
   end
 
+  def transcribe(%Expr.Case{} = case_expr, _expr_id, data, map, backup_resolve, out) do
+    true = false
+  end
+
   def transcribe(expr, expr_id, data, map, backup_resolve, out) do
     new_expr_id = PDAst.add_expr(out)
     map = Map.put(map, expr_id, new_expr_id)
@@ -43,8 +53,26 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Util.Transcribe do
           new_expr_id = transcribe_maybe_scope(inner_expr_id, data, map, backup_resolve, out)
           {new_expr_id, map}
 
+        :scope, _selector, inner_expr_id, map ->
+          new_expr_id = transcribe_maybe_scope(inner_expr_id, data, map, backup_resolve, out)
+          {new_expr_id, map}
+
         :pattern, _selector, {pattern, binds}, map ->
           {{pattern, binds}, map}
+
+        :literal, _selector, literal, map ->
+          {:literal, lit} = FlatAst.get(data.ast, literal)
+          new_lit_id = PDAst.add_literal(out, lit)
+          {new_lit_id, map}
+
+        :ref, _selector, {:expr_bind, eid, bind_selector}, map ->
+          {:expr, new_eid} = Map.get(map, {:expr, eid}) || backup_resolve.({:expr, eid})
+          new_ref = {:expr_bind, new_eid, bind_selector}
+
+          {new_ref, map}
+
+        :ref, _selector, ref_expr, map ->
+          {Map.fetch!(map, ref_expr), map}
       end)
 
     :ok = PDAst.set_expr(out, new_expr_id, new_expr)

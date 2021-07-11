@@ -10,6 +10,7 @@ defmodule Phoenix.LiveData.Tracked.Compiler do
 
     {:ok, ast} = FlatAst.FromAst.from_clauses(clauses)
     ast = FlatAst.Pass.Normalize.normalize(ast)
+    IO.inspect ast
 
     nesting = FlatAst.Pass.CalculateNesting.calculate_nesting(ast)
 

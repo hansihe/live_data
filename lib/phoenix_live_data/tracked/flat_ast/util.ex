@@ -142,26 +142,28 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Util do
   end
 
   def transform_expr(%Expr.Case{} = expr, acc, fun) do
+    {new_value, acc} = fun.(:value, :value, expr.value, acc)
+
     {clauses, acc} =
       expr.clauses
       |> Enum.with_index()
       |> Enum.map_reduce(acc, fn
-        {{pattern, binds, guard, body}, idx}, acc ->
-          {{new_pattern, new_binds}, acc} = fun.(:pattern, {idx, :pattern}, {pattern, binds}, acc)
+        {%Expr.Case.Clause{} = clause, idx}, acc ->
+          {{new_pattern, new_binds}, acc} = fun.(:pattern, {idx, :pattern}, {clause.pattern, clause.binds}, acc)
 
           {new_guard, acc} =
-            if guard do
-              fun.(:scope, {idx, :guard}, guard, acc)
+            if clause.guard do
+              fun.(:scope, {idx, :guard}, clause.guard, acc)
             else
               {nil, acc}
             end
 
-          {new_body, acc} = fun.(:scope, {idx, :body}, body, acc)
+          {new_body, acc} = fun.(:scope, {idx, :body}, clause.body, acc)
 
-          {{new_pattern, new_binds, new_guard, new_body}, acc}
+          {%{clause | pattern: new_pattern, binds: new_binds, guard: new_guard, body: new_body}, acc}
       end)
 
-    new_expr = %{expr | clauses: clauses}
+    new_expr = %{expr | value: new_value, clauses: clauses}
     {new_expr, acc}
   end
 

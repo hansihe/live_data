@@ -133,6 +133,17 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.RewriteAst do
     rewrite_make_structure_rec(result_expr, ast, static_id, state)
   end
 
+  def rewrite_make_structure_rec(%Expr.Case{} = expr, expr_id, ast, static_id, state) do
+    :ok = state_static_add_dependencies(state, [expr.value])
+
+    for clause <- expr.clauses do
+      _inner_expr = rewrite_make_structure(clause.body, ast, state)
+    end
+    :ok = state_static_add_traversed(state, expr_id)
+
+    state_static_add_slot(state, static_id, expr_id)
+  end
+
   def rewrite_make_structure_rec(%Expr.For{} = expr, expr_id, ast, static_id, state) do
     items =
       Enum.map(expr.items, fn
@@ -195,7 +206,14 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.RewriteAst do
     {:literal, lit}
   end
 
-  def rewrite_make_structure_rec(_expr, expr_id, _ast, static_id, state) do
+  def rewrite_make_structure_rec(%Expr.MakeCons{} = expr, _expr_id, ast, static_id, state) do
+    head_rewrite = rewrite_make_structure_rec(expr.head, ast, static_id, state)
+    tail_rewrite = rewrite_make_structure_rec(expr.tail, ast, static_id, state)
+
+    [head_rewrite | tail_rewrite]
+  end
+
+  def rewrite_make_structure_rec(expr, expr_id, _ast, static_id, state) do
     :ok = state_static_add_dependencies(state, [expr_id])
     state_static_add_slot(state, static_id, expr_id)
   end
@@ -264,6 +282,10 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.RewriteAst do
 
   def expand_dependencies_inner([], _original, visited, _data, _ast) do
     visited
+  end
+
+  def child_exprs_without_traversed(%Expr.Case{} = expr) do
+    [expr.value]
   end
 
   def child_exprs_without_traversed(%Expr.For{} = expr) do
@@ -345,7 +367,15 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.RewriteAst do
       # {inner_expr_id, rewritten}
 
       {:ok, {:finished, static, slots, key}} ->
-        new_slots = Enum.map(slots, &(Map.get(rewritten, &1) || Map.fetch!(transcribed, &1)))
+        new_slots = Enum.map(slots, fn
+          {:expr_bind, eid, selector} ->
+            expr_id = {:expr, eid}
+            {:expr, new_eid} = Map.get(rewritten, expr_id) || Map.fetch!(transcribed, expr_id)
+            {:expr_bind, new_eid, selector}
+
+          {:expr, _eid} = expr_id ->
+            Map.get(rewritten, expr_id) || Map.fetch!(transcribed, expr_id)
+        end)
 
         new_key =
           if key do
@@ -370,6 +400,10 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.RewriteAst do
             {new_inner, _rewritten} = rewrite_scope(inner, data, rewritten, transcribed, out)
             {new_inner, rewritten}
 
+          {%Expr.Case{}, :scope, {_idx, :body}} ->
+            {new_inner, _rewritten} = rewrite_scope(inner, data, rewritten, transcribed, out)
+            {new_inner, rewritten}
+
           {_, :scope, _} ->
             {new_inner, _transcribed} =
               Util.Transcribe.transcribe(
@@ -382,6 +416,10 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.RewriteAst do
 
             {new_inner, rewritten}
 
+          {_, :value, _} ->
+            new_inner = rewrite_resolve(inner, data, rewritten, transcribed, out)
+            {new_inner, rewritten}
+
           {_, :pattern, _} ->
             {inner, rewritten}
         end
@@ -391,6 +429,21 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.RewriteAst do
     rewritten = Map.put(rewritten, expr_id, new_expr_id)
 
     {new_expr_id, rewritten}
+  end
+
+  def rewrite_resolve({:expr_bind, eid, selector}, _data, rewritten, transcribed, _out) do
+    expr_id = {:expr, eid}
+    {:expr, new_eid} = Map.get(rewritten, expr_id) || Map.fetch!(transcribed, expr_id)
+    {:expr_bind, new_eid, selector}
+  end
+
+  def rewrite_resolve({:expr, _eid} = expr_id, _data, rewritten, transcribed, _out) do
+    Map.get(rewritten, expr_id) || Map.fetch!(transcribed, expr_id)
+  end
+
+  def rewrite_resolve({:literal, _lit_id} = literal_id, data, _rewritten, _transcribed, out) do
+    {:literal, literal} = FlatAst.get(data.ast, literal_id)
+    PDAst.add_literal(out, literal)
   end
 
   def rewrite_scope_resolve({:expr_bind, eid, selector}, _data, rewritten, _transcribed, _out) do
