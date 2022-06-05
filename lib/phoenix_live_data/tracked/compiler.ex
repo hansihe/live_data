@@ -10,7 +10,7 @@ defmodule Phoenix.LiveData.Tracked.Compiler do
 
     {:ok, ast} = FlatAst.FromAst.from_clauses(clauses)
     ast = FlatAst.Pass.Normalize.normalize(ast)
-    IO.inspect ast
+    IO.inspect ast, limit: :infinity
 
     nesting = FlatAst.Pass.CalculateNesting.calculate_nesting(ast)
 
@@ -30,7 +30,7 @@ defmodule Phoenix.LiveData.Tracked.Compiler do
 
     expr = FlatAst.ToAst.to_expr(new_ast, pretty: true)
     tracked_defs = Util.fn_to_defs(expr, tracked_fun_name)
-    #IO.puts(Macro.to_string(tracked_defs))
+    IO.puts(Macro.to_string(tracked_defs))
 
     meta_fun_ast =
       quote do

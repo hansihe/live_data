@@ -12,7 +12,7 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Expr.Case do
     }
   end
 
-  def add_clause(cas, {:pattern, _peid} = pattern, binds, guard, {:expr, _beid} = body, location) do
+  def add_clause(cas, {:pattern, _peid} = pattern, binds, guard, body, location) do
     clause = %Clause{
       pattern: pattern,
       binds: binds,
@@ -23,4 +23,12 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Expr.Case do
 
     %{cas | clauses: [clause | cas.clauses]}
   end
+
+  def finish(cas) do
+    %{
+      cas |
+      clauses: Enum.reverse(cas.clauses)
+    }
+  end
+
 end

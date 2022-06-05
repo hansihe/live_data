@@ -42,6 +42,8 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.FromAst do
         Expr.Fn.add_clause(fun, patterns, pat_var_map, guard_expr, body_expr, location)
       end)
 
+    fun = Expr.Fn.finish(fun)
+
     :ok = PDAst.set_expr(out, expr_id, fun)
     :ok = PDAst.set_root(out, expr_id)
 
@@ -50,6 +52,18 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.FromAst do
   end
 
   # def clause_body()
+
+  def from_pattern(tup, binds, scope, out) when is_tuple(tup) and tuple_size(tup) != 3 do
+    tup_list = Tuple.to_list(tup)
+    {elems, binds} = Enum.map_reduce(tup_list, binds, fn elem, binds ->
+      {binds, pattern_id} = from_pattern(elem, binds, scope, out)
+      {pattern_id, binds}
+    end)
+
+    pattern_id = PDAst.add_pattern(out, {:tuple, elems})
+
+    {binds, pattern_id}
+  end
 
   def from_pattern({name, _opts, ctx} = var, binds, _scope, out)
       when is_atom(name) and is_atom(ctx) do
@@ -168,6 +182,8 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.FromAst do
           Expr.Fn.add_clause(fun, patterns, pat_var_map, nil, body_expr, location)
       end)
 
+    fun = Expr.Fn.finish(fun)
+
     :ok = PDAst.set_expr(out, expr_id, fun)
     {expr_id, scope}
   end
@@ -261,6 +277,8 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.FromAst do
 
           Expr.Case.add_clause(case_expr, pattern, pat_var_map, nil, body_expr, location)
       end)
+
+    case_expr = Expr.Case.finish(case_expr)
 
     :ok = PDAst.set_expr(out, expr_id, case_expr)
     {expr_id, scope}

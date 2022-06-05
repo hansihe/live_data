@@ -45,4 +45,12 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Expr.Fn do
 
     %{defa | clauses: [clause | defa.clauses]}
   end
+
+  def finish(defa) do
+    %{
+      defa |
+      clauses: Enum.reverse(defa.clauses)
+    }
+  end
+
 end

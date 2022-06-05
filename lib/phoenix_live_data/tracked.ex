@@ -49,12 +49,14 @@ defmodule Phoenix.LiveData.Tracked do
   end
 
   defp define(module, {_name, _arity} = fun) do
-    {:v1, kind, meta, clauses} = Tracked.Module.get_definition(module, fun)
+    #{:v1, kind, meta, clauses} = Tracked.Module.get_definition(module, fun)
+    {:v1, kind, meta, clauses} = Elixir.Module.get_definition(module, fun)
 
     compiled = Compiler.compile(module, fun, kind, meta, clauses)
 
     quote do
-      Phoenix.LiveData.Tracked.Module.delete_definition(unquote(module), unquote(fun))
+      #Phoenix.LiveData.Tracked.Module.delete_definition(unquote(module), unquote(fun))
+      Elixir.Module.delete_definition(unquote(module), unquote(fun))
       unquote(compiled)
     end
   end

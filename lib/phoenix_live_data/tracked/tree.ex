@@ -12,12 +12,13 @@ defmodule Phoenix.LiveData.Tracked.Tree do
   def render(tree, state) do
     {ops, render_state} = Render.render_diff(tree, state.render)
 
-    # {ops, diff_state} = Diff.diff_ops(ops, state.diff)
+    {diff_ops, diff_state} = Diff.diff_ops(ops, state.diff)
+    IO.inspect diff_ops
 
     state = %{
       state |
       render: render_state,
-      #diff: diff_state
+      diff: diff_state
     }
 
     {ops, state}

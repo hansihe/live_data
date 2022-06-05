@@ -1,4 +1,5 @@
 defmodule Phoenix.LiveData.Tracked.Diff do
+  alias Phoenix.LiveData.Tracked.Tree
 
   def new() do
     %{
@@ -12,24 +13,26 @@ defmodule Phoenix.LiveData.Tracked.Diff do
     end)
   end
 
-  def diff_op({:s, id, new_data} = op, state) do
+  def diff_op({:set_fragment, id, new_data} = op, state) do
     old = Map.fetch(state.fragments, id)
     state = put_in(state.fragments[id], new_data)
 
     case old do
       {:ok, old_data} ->
-        patches = diff_data(old_data, new_data)
+        {[op], state}
 
-        case patches do
-          :equal ->
-            {[], state}
+        #patches = diff_data(old_data, new_data)
 
-          _ ->
-            ops = [
-              {:p, id, patches}
-            ]
-            {ops, state}
-        end
+        #case patches do
+        #  :equal ->
+        #    {[], state}
+
+        #  _ ->
+        #    ops = [
+        #      {:patch_fragment, id, patches}
+        #    ]
+        #    {ops, state}
+        #end
 
       _ ->
         {[op], state}
@@ -38,6 +41,21 @@ defmodule Phoenix.LiveData.Tracked.Diff do
 
   def diff_op(op, state) do
     {[op], state}
+  end
+
+  def diff_data(%Tree.Template{} = old, %Tree.Template{} = new) do
+    # TODO diff individual slots
+    if old == new do
+      :equal
+    else
+      [
+        {:set_template, new}
+      ]
+    end
+  end
+
+  def diff_data(_old, %_{}) do
+    throw "structs are unsupported"
   end
 
   def diff_data(%{} = old, %{} = new) do
@@ -61,6 +79,14 @@ defmodule Phoenix.LiveData.Tracked.Diff do
       {:replace, new}
     end
   end
+
+  #def diff_slots([], []) do
+  #  []
+  #end
+
+  #def diff_slots([old | old_tail], [new | new_tail]) do
+  #  diffed = diff_data(old, new)
+  #end
 
   def diff_keys([key | lt], [key | rt], old, new, acc) do
     # When keys match, we diff the value.

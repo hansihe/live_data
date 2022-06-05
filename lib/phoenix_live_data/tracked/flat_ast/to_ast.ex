@@ -163,6 +163,13 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.ToAst do
     {[{:|, [], [head_ast, tail_ast]}], gen}
   end
 
+  def to_expr_inner(%Expr.MakeTuple{elements: elems, location: location}, _expr_id, gen, ast, scope_mode, opts) do
+    {elems, gen} = Enum.map_reduce(elems, gen, &to_expr(&1, &2, ast, scope_mode, opts))
+
+    ast_opts = make_opts(location: location)
+    {{:{}, ast_opts, elems}, gen}
+  end
+
   def to_expr_inner(%Expr.Case{} = expr, {:expr, eid}, gen, ast, scope_mode, opts) do
     {value_ast, gen} = to_expr(expr.value, gen, ast, scope_mode, opts)
 
@@ -304,6 +311,15 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.ToAst do
   def to_pattern(pattern_id, gen, ast, opts) do
     pattern = FlatAst.get(ast, pattern_id)
     to_pattern_inner(pattern, pattern_id, gen, ast, opts)
+  end
+
+  def to_pattern_inner({:tuple, elems}, _pattern_id, gen, ast, opts) do
+    {new_elems, gen} =  Enum.map_reduce(elems, gen, fn
+      elem, gen ->
+        to_pattern(elem, gen, ast, opts)
+    end)
+
+    {{:{}, [], new_elems}, gen}
   end
 
   def to_pattern_inner({:bind, var}, _pattern_id, gen, _ast, _opts) do

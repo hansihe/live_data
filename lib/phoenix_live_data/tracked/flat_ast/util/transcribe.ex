@@ -39,9 +39,9 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Util.Transcribe do
     {new_expr_id, map}
   end
 
-  def transcribe(%Expr.Case{} = case_expr, _expr_id, data, map, backup_resolve, out) do
-    true = false
-  end
+  #def transcribe(%Expr.Case{} = case_expr, _expr_id, data, map, backup_resolve, out) do
+  #  true = false
+  #end
 
   def transcribe(expr, expr_id, data, map, backup_resolve, out) do
     new_expr_id = PDAst.add_expr(out)

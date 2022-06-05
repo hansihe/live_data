@@ -159,6 +159,11 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.RewriteAst do
     state_static_add_slot(state, static_id, expr_id)
   end
 
+  def rewrite_make_structure_rec(%Expr.CallMF{module: nil}, expr_id, _ast, static_id, state) do
+    :ok = state_static_add_dependencies(state, [expr_id])
+    state_static_add_slot(state, static_id, expr_id)
+  end
+
   def rewrite_make_structure_rec(%Expr.CallMF{} = expr, expr_id, ast, static_id, state) do
     case {FlatAst.get(ast, expr.module), FlatAst.get(ast, expr.function)} do
       {{:literal, Phoenix.LiveData.Tracked.Dummy}, {:literal, :keyed_stub}} ->
@@ -326,6 +331,10 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.RewriteAst do
     %Expr.Scope{exprs: scope_exprs} = FlatAst.get(data.ast, expr_id)
     old_rewritten = rewritten
 
+    IO.inspect scope_exprs
+    IO.inspect Enum.filter(scope_exprs, &MapSet.member?(data.dependencies, &1))
+    IO.inspect Enum.filter(scope_exprs, &MapSet.member?(data.traversed, &1))
+
     # Step 1: Transcribe dependencies
     {transcribed_exprs, transcribed} =
       scope_exprs
@@ -370,6 +379,7 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.RewriteAst do
         new_slots = Enum.map(slots, fn
           {:expr_bind, eid, selector} ->
             expr_id = {:expr, eid}
+            IO.inspect({rewritten, transcribed})
             {:expr, new_eid} = Map.get(rewritten, expr_id) || Map.fetch!(transcribed, expr_id)
             {:expr_bind, new_eid, selector}
 
@@ -514,7 +524,13 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.RewriteAst do
 
   def state_static_add_dependencies(state, exprs) do
     Agent.update(state, fn state ->
-      update_in(state.dependencies, &MapSet.union(&1, MapSet.new(exprs)))
+      canonical_exprs = Enum.map(exprs, fn
+        nil -> nil
+        {:expr, _eid} = expr_id -> expr_id
+        {:expr_bind, eid, _selector} -> {:expr, eid}
+      end)
+
+      update_in(state.dependencies, &MapSet.union(&1, MapSet.new(canonical_exprs)))
     end)
   end
 

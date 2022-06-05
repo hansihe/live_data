@@ -126,7 +126,10 @@ class FormTextFieldFactory extends WidgetFactory {
   FormTextField build(Map<dynamic, dynamic> tree, RegistryBuildContext context) {
     return FormTextField(
       fieldName: tree['field'],
-      decoration: InputDecoration(),
+      decoration: InputDecoration(
+        errorText: tree['error'],
+        hintText: tree['hint'],
+      ),
     );
   }
 }
