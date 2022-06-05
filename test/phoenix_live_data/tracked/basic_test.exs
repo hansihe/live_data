@@ -1,7 +1,7 @@
-defmodule Phoenix.LiveData.Tracked.BasicTest do
+defmodule LiveData.Tracked.BasicTest do
   use ExUnit.Case
 
-  use Phoenix.LiveData.Tracked
+  use LiveData.Tracked
 
   deft fully_static_data_structure do
     %{

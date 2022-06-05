@@ -1,4 +1,4 @@
-defmodule Phoenix.LiveData.Tracked.FlatAst.Expr.Literal do
+defmodule LiveData.Tracked.FlatAst.Expr.Literal do
   defstruct literal: nil
 
   def new(literal) do

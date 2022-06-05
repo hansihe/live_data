@@ -1,13 +1,13 @@
-defmodule Phoenix.LiveData.Tracked.TreeTest do
+defmodule LiveData.Tracked.TreeTest do
   use ExUnit.Case
 
-  alias Phoenix.LiveData.Tracked.Render
-  alias Phoenix.LiveData.Tracked.Apply
-  alias Phoenix.LiveData.Tracked.Diff
-  alias Phoenix.LiveData.Tracked.Tree
-  alias Phoenix.LiveData.Tracked.Encoding
+  alias LiveData.Tracked.Render
+  alias LiveData.Tracked.Apply
+  alias LiveData.Tracked.Diff
+  alias LiveData.Tracked.Tree
+  alias LiveData.Tracked.Encoding
 
-  use Phoenix.LiveData.Tracked
+  use LiveData.Tracked
 
   deft render(assigns) do
     %{
@@ -101,7 +101,7 @@ defmodule Phoenix.LiveData.Tracked.TreeTest do
   # def proto__track_render2__(:render, assigns) do
   #  scope_id = {__MODULE__, :render2, 1}
 
-  #  %Phoenix.LiveData.Tracked.Cond{
+  #  %LiveData.Tracked.Cond{
   #    id: {scope_id, 0},
   #    escapes: [assigns],
   #    render: fn ->
@@ -116,7 +116,7 @@ defmodule Phoenix.LiveData.Tracked.TreeTest do
   #                      proto__track_render_post__(:render, post)
   #                    end
 
-  #                    %Phoenix.LiveData.Tracked.Keyed{
+  #                    %LiveData.Tracked.Keyed{
   #                      id: {scope_id, 2},
   #                      key: post.id,
   #                      escapes: [post],
@@ -126,7 +126,7 @@ defmodule Phoenix.LiveData.Tracked.TreeTest do
   #              }
   #            end
 
-  #            %Phoenix.LiveData.Tracked.Keyed{
+  #            %LiveData.Tracked.Keyed{
   #              id: {scope_id, 1},
   #              key: category.id,
   #              escapes: [category],
@@ -155,7 +155,7 @@ defmodule Phoenix.LiveData.Tracked.TreeTest do
   # def proto__track_render_post__(:render, post) do
   #  scope_id = {__MODULE__, :render_post, 1}
 
-  #  %Phoenix.LiveData.Tracked.Cond{
+  #  %LiveData.Tracked.Cond{
   #    id: {scope_id, 0},
   #    escapes: [post],
   #    render: fn ->

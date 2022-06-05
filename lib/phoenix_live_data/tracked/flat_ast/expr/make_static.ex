@@ -1,4 +1,4 @@
-defmodule Phoenix.LiveData.Tracked.FlatAst.Expr.MakeStatic do
+defmodule LiveData.Tracked.FlatAst.Expr.MakeStatic do
   defstruct key: nil, static_id: nil, mfa: nil, slots: [], static: nil
 
   def new(static_id, static, slots, mfa, key \\ nil) do

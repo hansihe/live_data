@@ -1,5 +1,5 @@
-defmodule Phoenix.LiveData.Tracked.Diff do
-  alias Phoenix.LiveData.Tracked.Tree
+defmodule LiveData.Tracked.Diff do
+  alias LiveData.Tracked.Tree
 
   def new() do
     %{

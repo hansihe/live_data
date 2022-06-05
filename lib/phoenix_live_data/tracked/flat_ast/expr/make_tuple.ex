@@ -1,4 +1,4 @@
-defmodule Phoenix.LiveData.Tracked.FlatAst.Expr.MakeTuple do
+defmodule LiveData.Tracked.FlatAst.Expr.MakeTuple do
   defstruct elements: [], location: nil
 
   def new(elements, location \\ nil) do

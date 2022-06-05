@@ -1,2 +1,2 @@
-defprotocol Phoenix.LiveData.Tracked.CustomFragment do
+defprotocol LiveData.Tracked.CustomFragment do
 end

@@ -1,2 +1,2 @@
-defmodule Phoenix.LiveData.Tracked.Datastructures.ClientList do
+defmodule LiveData.Tracked.Datastructures.ClientList do
 end

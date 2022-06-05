@@ -1,4 +1,4 @@
-defmodule Phoenix.LiveData.Tracked.FlatAst.Expr.SimpleAssign do
+defmodule LiveData.Tracked.FlatAst.Expr.SimpleAssign do
   defstruct inner: nil
 
   def new(inner) do

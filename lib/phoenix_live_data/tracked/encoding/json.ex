@@ -1,6 +1,6 @@
-defmodule Phoenix.LiveData.Tracked.Encoding.JSON do
-  alias Phoenix.LiveData.Tracked.Tree
-  alias Phoenix.LiveData.Tracked.Aliases
+defmodule LiveData.Tracked.Encoding.JSON do
+  alias LiveData.Tracked.Tree
+  alias LiveData.Tracked.Aliases
 
   @op_render 0
   @op_set_fragment 1

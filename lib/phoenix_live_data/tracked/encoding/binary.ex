@@ -1,5 +1,5 @@
-defmodule Phoenix.LiveData.Tracked.Encoding.Binary do
-  alias Phoenix.LiveData.Tracked.Tree
+defmodule LiveData.Tracked.Encoding.Binary do
+  alias LiveData.Tracked.Tree
 
   @op_render 0
   @op_put_fragment 1

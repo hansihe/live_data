@@ -1,4 +1,4 @@
-defmodule Phoenix.LiveData.Tracked.KeyedException do
+defmodule LiveData.Tracked.KeyedException do
   defexception mfa: nil, line: nil, previous: nil, next: nil
 
   @impl true

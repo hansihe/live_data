@@ -1,4 +1,4 @@
-defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.Normalize do
+defmodule LiveData.Tracked.FlatAst.Pass.Normalize do
   @moduledoc """
   Normalizes the AST, making things easier for later passes.
 
@@ -7,8 +7,8 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.Normalize do
     portion of an assignment is only ever one expression deep.
   """
 
-  alias Phoenix.LiveData.Tracked.FlatAst
-  alias Phoenix.LiveData.Tracked.FlatAst.Expr
+  alias LiveData.Tracked.FlatAst
+  alias LiveData.Tracked.FlatAst.Expr
 
   def normalize(ast) do
     IO.inspect ast

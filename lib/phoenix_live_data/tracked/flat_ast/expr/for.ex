@@ -1,4 +1,4 @@
-defmodule Phoenix.LiveData.Tracked.FlatAst.Expr.For do
+defmodule LiveData.Tracked.FlatAst.Expr.For do
   defstruct items: nil, into: nil, inner: nil, location: nil
 
   def new(items, into, inner, location \\ nil) do

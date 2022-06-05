@@ -1,8 +1,8 @@
-defmodule Phoenix.LiveData.Tracked.FlatAst.Util.Transcribe do
-  alias Phoenix.LiveData.Tracked.FlatAst
-  alias Phoenix.LiveData.Tracked.FlatAst.Expr
-  alias Phoenix.LiveData.Tracked.FlatAst.PDAst
-  alias Phoenix.LiveData.Tracked.FlatAst.Util
+defmodule LiveData.Tracked.FlatAst.Util.Transcribe do
+  alias LiveData.Tracked.FlatAst
+  alias LiveData.Tracked.FlatAst.Expr
+  alias LiveData.Tracked.FlatAst.PDAst
+  alias LiveData.Tracked.FlatAst.Util
 
   @doc """
   Directly transcribes the given selection from the input AST to the output.

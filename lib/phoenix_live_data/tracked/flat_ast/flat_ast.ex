@@ -1,4 +1,4 @@
-defmodule Phoenix.LiveData.Tracked.FlatAst do
+defmodule LiveData.Tracked.FlatAst do
   defstruct exprs: %{},
             patterns: %{},
             variables: %{},

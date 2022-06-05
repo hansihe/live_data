@@ -1,6 +1,6 @@
-defmodule Phoenix.LiveData.Tracked.FlatAst.Util do
-  alias Phoenix.LiveData.Tracked.FlatAst
-  alias Phoenix.LiveData.Tracked.FlatAst.Expr
+defmodule LiveData.Tracked.FlatAst.Util do
+  alias LiveData.Tracked.FlatAst
+  alias LiveData.Tracked.FlatAst.Expr
 
   def unique_integer do
     :erlang.unique_integer()

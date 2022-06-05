@@ -1,6 +1,6 @@
-defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.CalculateNesting do
-  alias Phoenix.LiveData.Tracked.FlatAst
-  alias Phoenix.LiveData.Tracked.FlatAst.Expr
+defmodule LiveData.Tracked.FlatAst.Pass.CalculateNesting do
+  alias LiveData.Tracked.FlatAst
+  alias LiveData.Tracked.FlatAst.Expr
 
   def calculate_nesting(ast) do
     calculate_nesting_rec(ast.root, false, [], %{}, ast)

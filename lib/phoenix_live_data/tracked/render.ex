@@ -1,7 +1,7 @@
-defmodule Phoenix.LiveData.Tracked.Render do
-  alias Phoenix.LiveData.Tracked
-  alias Phoenix.LiveData.Tracked.Tree
-  alias Phoenix.LiveData.Tracked.RenderTree
+defmodule LiveData.Tracked.Render do
+  alias LiveData.Tracked
+  alias LiveData.Tracked.Tree
+  alias LiveData.Tracked.RenderTree
 
   @root_id {{__MODULE__, :internal, 0}, 0}
 

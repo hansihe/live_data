@@ -1,4 +1,4 @@
-defmodule Phoenix.LiveData.Tracked.Aliases do
+defmodule LiveData.Tracked.Aliases do
   defstruct next_id: 0, ids: %{}
 
   def new do

@@ -1,4 +1,4 @@
-defmodule Phoenix.LiveData.Tracked.Module do
+defmodule LiveData.Tracked.Module do
   @moduledoc false
 
   # TODO: remove this module once Elixir v1.12 is out.

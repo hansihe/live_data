@@ -1,4 +1,4 @@
-defmodule Phoenix.LiveData.Tracked.FlatAst.Expr.Block do
+defmodule LiveData.Tracked.FlatAst.Expr.Block do
   defstruct exprs: [], location: nil
 
   def new(exprs, location \\ nil) do

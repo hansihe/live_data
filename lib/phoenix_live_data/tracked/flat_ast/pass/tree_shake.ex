@@ -1,3 +1,3 @@
-defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.TreeShake do
+defmodule LiveData.Tracked.FlatAst.Pass.TreeShake do
 
 end

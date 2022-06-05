@@ -1,6 +1,6 @@
-defmodule Phoenix.LiveData.Tracked.Compiler do
-  alias Phoenix.LiveData.Tracked.FlatAst
-  alias Phoenix.LiveData.Tracked.Util
+defmodule LiveData.Tracked.Compiler do
+  alias LiveData.Tracked.FlatAst
+  alias LiveData.Tracked.Util
 
   def compile(module, {name, arity} = fun, kind, _meta, clauses) do
     full_mfa = {module, name, arity}
@@ -175,7 +175,7 @@ defmodule Phoenix.LiveData.Tracked.Compiler do
   #    |> Enum.map(fn {name, ctx} -> {name, [], ctx} end)
 
   #  quote do
-  #    %Phoenix.LiveData.Tracked.Tree.Keyed{
+  #    %LiveData.Tracked.Tree.Keyed{
   #      id: {unquote(context_var), unquote(fragment_var)},
   #      key: unquote(key),
   #      escapes: unquote(active_vars_expr),
@@ -187,7 +187,7 @@ defmodule Phoenix.LiveData.Tracked.Compiler do
   #end
 
   # Utils
-  
+
   def traverse_clauses(clauses, state, pre, post) do
     clauses
     |> Enum.map_reduce(state, fn {opts, args, [], ast}, state ->

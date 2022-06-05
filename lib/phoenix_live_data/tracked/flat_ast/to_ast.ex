@@ -1,7 +1,7 @@
-defmodule Phoenix.LiveData.Tracked.FlatAst.ToAst do
-  alias Phoenix.LiveData.Tracked.FlatAst
-  alias Phoenix.LiveData.Tracked.FlatAst.Expr
-  alias Phoenix.LiveData.Tracked.Tree.Slot
+defmodule LiveData.Tracked.FlatAst.ToAst do
+  alias LiveData.Tracked.FlatAst
+  alias LiveData.Tracked.FlatAst.Expr
+  alias LiveData.Tracked.Tree.Slot
 
   def to_expr(ast, opts \\ []) do
     opts = %{
@@ -279,7 +279,7 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.ToAst do
 
     expr =
       quote do
-        %Phoenix.LiveData.Tracked.RenderTree.Static{
+        %LiveData.Tracked.RenderTree.Static{
           id: unquote(id_expr),
           template: unquote(template_expr),
           slots: unquote(slots)
@@ -297,7 +297,7 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.ToAst do
 
     expr =
       quote do
-        %Phoenix.LiveData.Tracked.RenderTree.Keyed{
+        %LiveData.Tracked.RenderTree.Keyed{
           id: unquote(id_expr),
           key: unquote(key_expr),
           escapes: :always,

@@ -1,3 +1,3 @@
-defmodule Phoenix.LiveData.Tracked.RenderTree.Static do
+defmodule LiveData.Tracked.RenderTree.Static do
   defstruct id: nil, template: nil, slots: nil
 end

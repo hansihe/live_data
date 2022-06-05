@@ -1,4 +1,4 @@
-# PhoenixLiveData
+# LiveData
 
 **TODO: Add description**
 
@@ -10,7 +10,7 @@ by adding `phoenix_data_view` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:phoenix_data_view, "~> 0.1.0"}
+    {:data_view, "~> 0.1.0"}
   ]
 end
 ```

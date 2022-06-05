@@ -1,9 +1,9 @@
-defmodule Phoenix.LiveData do
+defmodule LiveData do
   @moduledoc """
-  Documentation for `Phoenix.LiveData`.
+  Documentation for `LiveData`.
   """
 
-  alias Phoenix.LiveData.{Socket, Tracked}
+  alias LiveData.{Socket, Tracked}
 
   @type rendered :: any()
 
@@ -19,9 +19,9 @@ defmodule Phoenix.LiveData do
 
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts] do
-      use Phoenix.LiveData.Tracked
-      import Phoenix.LiveData
-      @behaviour Phoenix.LiveData
+      use LiveData.Tracked
+      import LiveData
+      @behaviour LiveData
     end
   end
 

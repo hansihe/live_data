@@ -1,6 +1,6 @@
-defmodule Phoenix.LiveData.Tracked.Tree do
-  alias Phoenix.LiveData.Tracked.Diff
-  alias Phoenix.LiveData.Tracked.Render
+defmodule LiveData.Tracked.Tree do
+  alias LiveData.Tracked.Diff
+  alias LiveData.Tracked.Render
 
   defstruct render: Render.new(),
             diff: Diff.new()

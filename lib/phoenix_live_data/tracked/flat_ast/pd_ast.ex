@@ -1,5 +1,5 @@
-defmodule Phoenix.LiveData.Tracked.FlatAst.PDAst do
-  alias Phoenix.LiveData.Tracked.FlatAst
+defmodule LiveData.Tracked.FlatAst.PDAst do
+  alias LiveData.Tracked.FlatAst
 
   def init() do
     ref = make_ref()

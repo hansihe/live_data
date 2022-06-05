@@ -1,4 +1,4 @@
-defmodule Phoenix.LiveData.Tracked.Util do
+defmodule LiveData.Tracked.Util do
   def decompose_call!(kind, {:when, _opts, [call, _guard]}, env) do
     decompose_call!(kind, call, env)
   end

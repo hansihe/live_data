@@ -1,15 +1,15 @@
-defmodule Phoenix.LiveData.Tracked do
-  alias Phoenix.LiveData.Tracked
-  alias Phoenix.LiveData.Tracked.Compiler
-  alias Phoenix.LiveData.Tracked.Util
+defmodule LiveData.Tracked do
+  alias LiveData.Tracked
+  alias LiveData.Tracked.Compiler
+  alias LiveData.Tracked.Util
 
   @type tree :: any()
 
   defmacro __using__(_opts) do
     quote do
-      @before_compile Phoenix.LiveData.Tracked
+      @before_compile LiveData.Tracked
       :ok = Module.register_attribute(__MODULE__, :phoenix_data_view_tracked, accumulate: true)
-      import Phoenix.LiveData.Tracked, only: [deft: 2, defpt: 2]
+      import LiveData.Tracked, only: [deft: 2, defpt: 2]
     end
   end
 
@@ -55,7 +55,7 @@ defmodule Phoenix.LiveData.Tracked do
     compiled = Compiler.compile(module, fun, kind, meta, clauses)
 
     quote do
-      #Phoenix.LiveData.Tracked.Module.delete_definition(unquote(module), unquote(fun))
+      #LiveData.Tracked.Module.delete_definition(unquote(module), unquote(fun))
       Elixir.Module.delete_definition(unquote(module), unquote(fun))
       unquote(compiled)
     end
@@ -64,7 +64,7 @@ defmodule Phoenix.LiveData.Tracked do
   defp make_main_fun(kind, call, body, env) do
     wrapped_body =
       quote do
-        import Phoenix.LiveData.Tracked.Dummy, only: [keyed: 2, track: 1]
+        import LiveData.Tracked.Dummy, only: [keyed: 2, track: 1]
         unquote(body)
       end
 

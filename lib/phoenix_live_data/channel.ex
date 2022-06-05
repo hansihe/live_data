@@ -1,13 +1,13 @@
-defmodule Phoenix.LiveData.Channel do
+defmodule LiveData.Channel do
   @moduledoc false
   use GenServer, restart: :temporary
 
   require Logger
 
   alias Phoenix.Socket.Message
-  alias Phoenix.LiveData.Socket
-  alias Phoenix.LiveData.Tracked.Tree
-  alias Phoenix.LiveData.Tracked.Encoding
+  alias LiveData.Socket
+  alias LiveData.Tracked.Tree
+  alias LiveData.Tracked.Encoding
 
   defstruct socket: nil,
             view: nil,

@@ -1,4 +1,4 @@
-defmodule Phoenix.LiveData.Tracked.Dummy do
+defmodule LiveData.Tracked.Dummy do
 
   defp make_tracked_fn_atom_ast(name) when is_atom(name) do
     atom_str = "__tracked__#{Atom.to_string(name)}__"

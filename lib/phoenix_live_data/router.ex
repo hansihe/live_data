@@ -1,18 +1,18 @@
-defmodule Phoenix.LiveData.Router do
+defmodule LiveData.Router do
   @moduledoc """
   Router for Phoenix LiveDatas.
   """
 
   defmacro __using__(opts) do
     quote do
-      import Phoenix.LiveData.Router
+      import LiveData.Router
 
       Module.register_attribute(__MODULE__, :phoenix_channels, accumulate: true)
       Module.register_attribute(__MODULE__, :phoenix_data_view_routes, accumulate: true)
 
       # === Begin Socket
       @behaviour Phoenix.Socket
-      @before_compile Phoenix.LiveData.Router
+      @before_compile LiveData.Router
       @phoenix_socket_options unquote(opts)
 
       @behaviour Phoenix.Socket.Transport
@@ -115,7 +115,7 @@ defmodule Phoenix.LiveData.Router do
 
     quote do
       # All channels under "dv:*" are reserved.
-      def __channel__("dv:c:" <> _rest), do: {Phoenix.LiveData.Channel, []}
+      def __channel__("dv:c:" <> _rest), do: {LiveData.Channel, []}
       def __channel__("dv:" <> _rest), do: nil
       unquote(channel_defs)
       def __channel__(_topic), do: nil

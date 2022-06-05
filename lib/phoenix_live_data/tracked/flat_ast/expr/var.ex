@@ -1,4 +1,4 @@
-defmodule Phoenix.LiveData.Tracked.FlatAst.Expr.Var do
+defmodule LiveData.Tracked.FlatAst.Expr.Var do
   defstruct ref_expr: nil, location: nil
 
   def new(ref_expr, location \\ nil) do

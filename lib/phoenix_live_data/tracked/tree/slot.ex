@@ -1,3 +1,3 @@
-defmodule Phoenix.LiveData.Tracked.Tree.Slot do
+defmodule LiveData.Tracked.Tree.Slot do
   defstruct num: nil
 end

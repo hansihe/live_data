@@ -1,5 +1,5 @@
-defmodule Phoenix.LiveData.Tracked.Apply do
-  alias Phoenix.LiveData.Tracked.Tree
+defmodule LiveData.Tracked.Apply do
+  alias LiveData.Tracked.Tree
 
   defstruct templates: %{},
             fragments: %{},

@@ -1,12 +1,12 @@
-defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.RewriteAst do
+defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst do
   @moduledoc """
   """
 
-  alias Phoenix.LiveData.Tracked.FlatAst
-  alias Phoenix.LiveData.Tracked.FlatAst.Expr
-  alias Phoenix.LiveData.Tracked.FlatAst.PDAst
-  alias Phoenix.LiveData.Tracked.FlatAst.Util
-  alias Phoenix.LiveData.Tracked.Tree.Slot
+  alias LiveData.Tracked.FlatAst
+  alias LiveData.Tracked.FlatAst.Expr
+  alias LiveData.Tracked.FlatAst.PDAst
+  alias LiveData.Tracked.FlatAst.Util
+  alias LiveData.Tracked.Tree.Slot
 
   def rewrite(ast, full_mfa, nesting_set) do
     #scopes =
@@ -166,7 +166,7 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.RewriteAst do
 
   def rewrite_make_structure_rec(%Expr.CallMF{} = expr, expr_id, ast, static_id, state) do
     case {FlatAst.get(ast, expr.module), FlatAst.get(ast, expr.function)} do
-      {{:literal, Phoenix.LiveData.Tracked.Dummy}, {:literal, :keyed_stub}} ->
+      {{:literal, LiveData.Tracked.Dummy}, {:literal, :keyed_stub}} ->
         [key_expr, value_expr] = expr.args
 
         :ok = state_static_add_dependencies(state, [key_expr])
@@ -174,7 +174,7 @@ defmodule Phoenix.LiveData.Tracked.FlatAst.Pass.RewriteAst do
 
         rewrite_make_structure_rec(value_expr, ast, static_id, state)
 
-      {{:literal, Phoenix.LiveData.Tracked.Dummy}, {:literal, :track_stub}} ->
+      {{:literal, LiveData.Tracked.Dummy}, {:literal, :track_stub}} ->
         [call_expr_id] = expr.args
         _call_expr = %Expr.CallMF{} = FlatAst.get(ast, call_expr_id)
 

@@ -1,4 +1,4 @@
-defmodule Phoenix.LiveData.Tracked.FlatAst.Expr.Fn do
+defmodule LiveData.Tracked.FlatAst.Expr.Fn do
   defstruct arity: nil, clauses: [], location: nil
 
   defmodule Clause do

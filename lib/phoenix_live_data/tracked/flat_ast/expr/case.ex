@@ -1,4 +1,4 @@
-defmodule Phoenix.LiveData.Tracked.FlatAst.Expr.Case do
+defmodule LiveData.Tracked.FlatAst.Expr.Case do
   defstruct value: nil, location: nil, clauses: []
 
   defmodule Clause do

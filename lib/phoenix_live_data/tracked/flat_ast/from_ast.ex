@@ -1,6 +1,6 @@
-defmodule Phoenix.LiveData.Tracked.FlatAst.FromAst do
-  alias Phoenix.LiveData.Tracked.FlatAst.Expr
-  alias Phoenix.LiveData.Tracked.FlatAst.PDAst
+defmodule LiveData.Tracked.FlatAst.FromAst do
+  alias LiveData.Tracked.FlatAst.Expr
+  alias LiveData.Tracked.FlatAst.PDAst
 
   def from_clauses([first_clause | _] = clauses) do
     {:ok, out} = PDAst.init()
