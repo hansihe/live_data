@@ -10,7 +10,7 @@ defmodule LiveData.Tracked.Compiler do
 
     {:ok, ast} = FlatAst.FromAst.from_clauses(clauses)
     ast = FlatAst.Pass.Normalize.normalize(ast)
-    IO.inspect ast, limit: :infinity
+    if LiveData.debug_prints?(), do: IO.inspect ast, limit: :infinity
 
     nesting = FlatAst.Pass.CalculateNesting.calculate_nesting(ast)
 
@@ -30,12 +30,14 @@ defmodule LiveData.Tracked.Compiler do
 
     expr = FlatAst.ToAst.to_expr(new_ast, pretty: true)
     tracked_defs = Util.fn_to_defs(expr, tracked_fun_name)
-    IO.puts(Macro.to_string(tracked_defs))
+    if LiveData.debug_prints?(), do: IO.puts(Macro.to_string(tracked_defs))
 
     meta_fun_ast =
       quote do
         def unquote(meta_fun_name)(:statics), do: unquote(Macro.escape(statics))
       end
+
+    if LiveData.debug_prints?(), do: IO.puts(Macro.to_string(meta_fun_ast))
 
     [
       make_normal_fun(kind, fun, clauses),

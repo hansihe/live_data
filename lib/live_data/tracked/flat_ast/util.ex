@@ -276,6 +276,19 @@ defmodule LiveData.Tracked.FlatAst.Util do
     {new_expr, acc}
   end
 
+  def transform_expr(%Expr.MakeBinary{} = expr, acc, fun) do
+    # TODO size specifier
+    {new_components, acc} =
+      expr.components
+      |> Enum.with_index()
+      |> Enum.map_reduce(acc, fn {{elem, specifiers}, idx}, acc ->
+        {new_elem, acc} = fun.(:value, idx, elem, acc)
+        {{new_elem, specifiers}, acc}
+      end)
+    new_expr = %{expr | components: new_components}
+    {new_expr, acc}
+  end
+
   def transform_expr(%Expr.Var{} = expr, acc, fun) do
     {new_ref_expr, acc} =
       case expr.ref_expr do
@@ -320,79 +333,4 @@ defmodule LiveData.Tracked.FlatAst.Util do
     end)
     |> Enum.reverse()
   end
-
-  #def child_exprs(%Expr.AccessField{top: top}) do
-  #  [top]
-  #end
-
-  #def child_exprs(%Expr.Block{exprs: exprs}) do
-  #  exprs
-  #end
-
-  #def child_exprs(%Expr.Scope{exprs: exprs}) do
-  #  exprs
-  #end
-
-  #def child_exprs(%Expr.CallMF{module: module, function: function, args: args}) do
-  #  if module do
-  #    [module, function | args]
-  #  else
-  #    [function | args]
-  #  end
-  #end
-
-  #def child_exprs(%Expr.Case{clauses: clauses}) do
-  #  Enum.flat_map(clauses, fn {_pattern, guard, body} -> [guard, body] end)
-  #end
-
-  #def child_exprs(%Expr.Fn{clauses: clauses}) do
-  #  Enum.flat_map(clauses, fn
-  #    {_pattern, _pattern_vars, nil, body} -> [body]
-  #    {_pattern, _pattern_vars, guard, body} -> [guard, body]
-  #  end)
-  #end
-
-  #def child_exprs(%Expr.For{items: items, into: into, inner: inner}) do
-  #  items_exprs =
-  #    Enum.flat_map(items, fn
-  #      {:loop, _pat, _binds, expr} -> [expr]
-  #      {:filter, expr} -> [expr]
-  #    end)
-
-  #  if into do
-  #    [inner, into | items_exprs]
-  #  else
-  #    [inner | items_exprs]
-  #  end
-  #end
-
-  #def child_exprs(%Expr.Literal{}) do
-  #  []
-  #end
-
-  #def child_exprs(%Expr.MakeMap{prev: prev, kvs: kvs}) do
-  #  kvs = Enum.flat_map(kvs, fn {key, val} -> [key, val] end)
-
-  #  if prev do
-  #    [prev | kvs]
-  #  else
-  #    kvs
-  #  end
-  #end
-
-  #def child_exprs(%Expr.Var{}) do
-  #  []
-  #end
-
-  #def child_exprs(%Expr.SimpleAssign{inner: inner}) do
-  #  [inner]
-  #end
-
-  #def child_exprs({:expr_bind, _eid, _selector}) do
-  #  []
-  #end
-
-  #def child_exprs({:literal, _lid}) do
-  #  []
-  #end
 end

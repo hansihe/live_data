@@ -17,7 +17,7 @@ defmodule LiveData.Channel do
             json_encoder: nil
 
   def start_link({endpoint, from}) do
-    IO.inspect({endpoint, from})
+    if LiveData.debug_prints?(), do: IO.inspect({endpoint, from})
     hibernate_after = endpoint.config(:live_view)[:hibernate_after] || 15000
     opts = [hibernate_after: hibernate_after]
     GenServer.start_link(__MODULE__, from, opts)
@@ -30,7 +30,7 @@ defmodule LiveData.Channel do
 
   @impl true
   def handle_info({Phoenix.Channel, params, from, phx_socket}, ref) do
-    IO.inspect({params, from, phx_socket})
+    if LiveData.debug_prints?(), do: IO.inspect({params, from, phx_socket})
     Process.demonitor(ref)
     mount(params, from, phx_socket)
   end
@@ -120,7 +120,7 @@ defmodule LiveData.Channel do
 
     state = %{state | tracked_state: tracked_state, json_encoder: json_encoder}
 
-    IO.inspect encoded_ops
+    if LiveData.debug_prints?(), do: IO.inspect encoded_ops
     push(state, "o", %{"o" => encoded_ops})
   end
 

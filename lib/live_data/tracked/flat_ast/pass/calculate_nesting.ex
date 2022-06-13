@@ -1,4 +1,9 @@
 defmodule LiveData.Tracked.FlatAst.Pass.CalculateNesting do
+  @moduledoc """
+  Given a FlatAST, will calculate a map of `expr_id` to a list of `expr_id`s it's
+  nested within.
+  """
+
   alias LiveData.Tracked.FlatAst
   alias LiveData.Tracked.FlatAst.Expr
 

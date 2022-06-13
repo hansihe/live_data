@@ -51,8 +51,6 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     {:ok, ast}
   end
 
-  # def clause_body()
-
   def from_pattern(tup, binds, scope, out) when is_tuple(tup) and tuple_size(tup) != 3 do
     tup_list = Tuple.to_list(tup)
     {elems, binds} = Enum.map_reduce(tup_list, binds, fn elem, binds ->
@@ -62,6 +60,11 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
 
     pattern_id = PDAst.add_pattern(out, {:tuple, elems})
 
+    {binds, pattern_id}
+  end
+
+  def from_pattern(name, binds, _scope, out) when is_atom(name) do
+    pattern_id = PDAst.add_pattern(out, {:atom, name})
     {binds, pattern_id}
   end
 
@@ -288,6 +291,19 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     {exprs, scope} = Enum.map_reduce(elems, scope, &from_expr(&1, &2, out))
     location = make_location(opts)
     expr_id = PDAst.add_expr(out, Expr.MakeTuple.new(exprs, location))
+    {expr_id, scope}
+  end
+
+  def from_expr({:<<>>, opts, elems}, scope, out) do
+    {items, scope} = Enum.map_reduce(elems, scope, fn
+      {:"::", _, [expr, specifiers]}, scope ->
+        # TODO information loss in opts?
+        # TODO size specifier
+        {expr, scope} = from_expr(expr, scope, out)
+        {{expr, specifiers}, scope}
+    end)
+    location = make_location(opts)
+    expr_id = PDAst.add_expr(out, Expr.MakeBinary.new(items, location))
     {expr_id, scope}
   end
 

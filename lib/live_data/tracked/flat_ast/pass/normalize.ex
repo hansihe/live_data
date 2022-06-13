@@ -5,14 +5,17 @@ defmodule LiveData.Tracked.FlatAst.Pass.Normalize do
   * Flatten nested blocks into a single linear block.
   * Normalize nested expressions into a sequence of assignments. The value
     portion of an assignment is only ever one expression deep.
+
+  Before the normalization pass is run, the AST will contain `Expr.Block`
+  nodes.
+
+  After normalization, all `Expr.Block`s will be rewritten into `Expr.Scope`s.
   """
 
   alias LiveData.Tracked.FlatAst
   alias LiveData.Tracked.FlatAst.Expr
 
   def normalize(ast) do
-    IO.inspect ast
-
     %Expr.Fn{} = expr = FlatAst.get(ast, ast.root)
 
     {new_clauses, ast} =
@@ -39,7 +42,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.Normalize do
   end
 
   def flatten_block(expr_id, ast) do
-    {last_item, block_items, ast} = flatten_block_rec(expr_id, ast)
+    {_last_item, block_items, ast} = flatten_block_rec(expr_id, ast)
     block_items = FlatAst.Util.recursive_flatten(block_items)
 
     # TODO filter useless

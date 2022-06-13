@@ -1,5 +1,4 @@
 defmodule LiveData.Tracked do
-  alias LiveData.Tracked
   alias LiveData.Tracked.Compiler
   alias LiveData.Tracked.Util
 

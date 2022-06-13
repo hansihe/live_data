@@ -170,6 +170,18 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     {{:{}, ast_opts, elems}, gen}
   end
 
+  def to_expr_inner(%Expr.MakeBinary{components: components, location: location}, _expr_id, gen, ast, scope_mode, opts) do
+    {elems, gen} = Enum.map_reduce(components, gen, fn
+      {expr, specifier}, gen ->
+        # TODO size specifier
+        {elem_ast, gen} = to_expr(expr, gen, ast, scope_mode, opts)
+        {{:"::", [], [elem_ast, specifier]}, gen}
+    end)
+
+    ast_opts = make_opts(location: location)
+    {{:<<>>, ast_opts, elems}, gen}
+  end
+
   def to_expr_inner(%Expr.Case{} = expr, {:expr, eid}, gen, ast, scope_mode, opts) do
     {value_ast, gen} = to_expr(expr.value, gen, ast, scope_mode, opts)
 
@@ -324,6 +336,10 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
 
   def to_pattern_inner({:bind, var}, _pattern_id, gen, _ast, _opts) do
     {var_to_expr(var, gen), gen}
+  end
+
+  def to_pattern_inner({:atom, name}, _pattern_id, gen, _ast, _opts) do
+    {name, gen}
   end
 
   def var_to_expr(var_info, gen, opts \\ [])

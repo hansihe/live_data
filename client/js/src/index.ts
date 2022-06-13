@@ -106,6 +106,8 @@ export class LiveData {
         this.channel.onClose(() => {});
 
         this.channel.on("o", (payload: {}) => {
+            console.log(payload);
+
             let rendered = this.encoding.handleMessage(payload["o"]);
 
             if (this.state == LiveDataState.ChannelJoining) {

@@ -12,8 +12,8 @@ defmodule LiveData do
   @callback handle_event(event :: any(), Socket.t()) :: {:ok, Socket.t()}
   @callback handle_info(message :: any(), Socket.t()) :: {:ok, Socket.t()}
 
-  @callback __tracked_render__(Socket.assigns()) :: Tracked.tree()
   @callback render(Socket.assigns()) :: rendered()
+  @callback __tracked__render__(Socket.assigns()) :: Tracked.tree()
 
   @optional_callbacks mount: 2, handle_event: 2, handle_info: 2
 
@@ -29,4 +29,6 @@ defmodule LiveData do
     assigns = Map.put(assigns, key, value)
     %{socket | assigns: assigns}
   end
+
+  def debug_prints?, do: false
 end

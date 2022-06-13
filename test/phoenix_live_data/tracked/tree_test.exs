@@ -40,7 +40,7 @@ defmodule LiveData.Tracked.TreeTest do
     }
   end
 
-  use FlutterView
+  #use FlutterView
 
   @tag :skip
   test "yay" do

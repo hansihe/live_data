@@ -11,7 +11,7 @@ defmodule LiveData.Tracked.FlatAst.Util.Transcribe do
   This is useful in the case where we have a separate, semantically different
   map of parent transcribed expressions.
   """
-  def transcribe({:literal, _} = lit_id, data, map, backup_resolve, out) do
+  def transcribe({:literal, _} = lit_id, data, map, _backup_resolve, out) do
     {:literal, lit} = FlatAst.get(data.ast, lit_id)
     new_lit_id = PDAst.add_literal(out, lit)
     {new_lit_id, map}

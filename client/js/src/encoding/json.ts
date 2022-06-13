@@ -88,6 +88,7 @@ export default class JSONEncoding {
         if (body === true || body == false) {
             return body;
         }
+        console.log(body);
         throw "unimpl";
     }
 
