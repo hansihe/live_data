@@ -1,4 +1,14 @@
 defmodule LiveData.Tracked do
+  @moduledoc """
+  This module contains implementations for the `deft` macros used
+  to define tracked functions.
+
+  `use` this module directly if you are defining `deft` functions
+  outside of a LiveData module.
+
+  This module is `use`d automatically when doing `use LiveData`
+  """
+
   alias LiveData.Tracked.Compiler
   alias LiveData.Tracked.Util
 
@@ -18,6 +28,7 @@ defmodule LiveData.Tracked do
     descr = Macro.escape({__CALLER__.module, {name, args_count}})
 
     quote do
+      unquote(__MODULE__).validate_used!(unquote(__CALLER__.file), unquote(__CALLER__.module), unquote(__CALLER__.line))
       @phoenix_data_view_tracked unquote(descr)
       unquote(make_main_fun(:def, call, body, __CALLER__))
     end
@@ -29,6 +40,7 @@ defmodule LiveData.Tracked do
     descr = Macro.escape({__CALLER__.module, {name, args_count}})
 
     quote do
+      unquote(__MODULE__).validate_used!(unquote(__CALLER__.file), unquote(__CALLER__.module), unquote(__CALLER__.line))
       @phoenix_data_view_tracked unquote(descr)
       unquote(make_main_fun(:defp, call, body, __CALLER__))
     end
@@ -47,14 +59,22 @@ defmodule LiveData.Tracked do
     end
   end
 
+  def validate_used!(file, module, line) do
+    unless Module.has_attribute?(module, :phoenix_data_view_tracked) do
+      throw %CompileError{
+        file: file,
+        line: line,
+        description: "`LiveData.Tracked` must be `use`d before calling `deft`"
+      }
+    end
+  end
+
   defp define(module, {_name, _arity} = fun) do
-    #{:v1, kind, meta, clauses} = Tracked.Module.get_definition(module, fun)
     {:v1, kind, meta, clauses} = Elixir.Module.get_definition(module, fun)
 
     compiled = Compiler.compile(module, fun, kind, meta, clauses)
 
     quote do
-      #LiveData.Tracked.Module.delete_definition(unquote(module), unquote(fun))
       Elixir.Module.delete_definition(unquote(module), unquote(fun))
       unquote(compiled)
     end

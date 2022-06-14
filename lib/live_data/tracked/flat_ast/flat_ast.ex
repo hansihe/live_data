@@ -1,4 +1,6 @@
 defmodule LiveData.Tracked.FlatAst do
+  @moduledoc false
+
   defstruct exprs: %{},
             patterns: %{},
             variables: %{},

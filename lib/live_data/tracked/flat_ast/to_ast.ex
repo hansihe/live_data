@@ -1,4 +1,6 @@
 defmodule LiveData.Tracked.FlatAst.ToAst do
+  @moduledoc false
+
   alias LiveData.Tracked.FlatAst
   alias LiveData.Tracked.FlatAst.Expr
   alias LiveData.Tracked.Tree.Slot

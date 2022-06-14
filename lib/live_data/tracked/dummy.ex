@@ -1,4 +1,13 @@
 defmodule LiveData.Tracked.Dummy do
+  @moduledoc false
+
+  """
+  This is the module where the actual implementations for the
+  marker functions used in deft functions live.
+
+  These should not be used directly by the user, they are
+  automatically imported into scope inside deft blocks.
+  """
 
   defp make_tracked_fn_atom_ast(name) when is_atom(name) do
     atom_str = "__tracked__#{Atom.to_string(name)}__"

@@ -1,5 +1,7 @@
 defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst do
-  @moduledoc """
+  @moduledoc false
+
+  """
   Must be given a normalized (Expr.Scope only, no Expr.Block) FlatAST.
 
   Will traverse the AST from the return position, rewriting static chunks into

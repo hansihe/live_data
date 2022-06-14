@@ -1,5 +1,7 @@
 defmodule LiveData.Tracked.FlatAst.Pass.Normalize do
-  @moduledoc """
+  @moduledoc false
+
+  """
   Normalizes the AST, making things easier for later passes.
 
   * Flatten nested blocks into a single linear block.

@@ -1,4 +1,6 @@
 defmodule LiveData.Tracked.FlatAst.PDAst do
+  @moduledoc false
+
   alias LiveData.Tracked.FlatAst
 
   def init() do

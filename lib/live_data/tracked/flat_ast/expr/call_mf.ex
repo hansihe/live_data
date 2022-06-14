@@ -1,4 +1,6 @@
 defmodule LiveData.Tracked.FlatAst.Expr.CallMF do
+  @moduledoc false
+
   defstruct module: nil, function: nil, args: [], location: nil
 
   def new(module, function, args, location \\ nil) do

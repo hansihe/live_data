@@ -1,4 +1,6 @@
 defmodule LiveData.Tracked.FlatAst.Expr.MakeTuple do
+  @moduledoc false
+
   defstruct elements: [], location: nil
 
   def new(elements, location \\ nil) do

@@ -1,4 +1,6 @@
 defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent do
+  @moduledoc false
+
   alias LiveData.Tracked.Tree.Slot
 
   def spawn do

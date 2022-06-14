@@ -1,4 +1,6 @@
 defmodule LiveData.Tracked.FlatAst.Expr.MakeBinary do
+  @moduledoc false
+
   defstruct components: [], location: nil
 
   def new(components, location) do

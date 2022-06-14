@@ -1,7 +1,11 @@
 defmodule LiveData.Tracked.FlatAst.Expr.Case do
+  @moduledoc false
+
   defstruct value: nil, location: nil, clauses: []
 
   defmodule Clause do
+    @moduledoc false
+
     defstruct pattern: nil, binds: nil, guard: nil, body: nil, location: nil
   end
 

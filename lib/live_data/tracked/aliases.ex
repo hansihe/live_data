@@ -1,4 +1,6 @@
 defmodule LiveData.Tracked.Aliases do
+  @moduledoc false
+
   defstruct next_id: 0, ids: %{}
 
   def new do

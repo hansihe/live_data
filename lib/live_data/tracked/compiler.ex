@@ -1,4 +1,10 @@
 defmodule LiveData.Tracked.Compiler do
+  @moduledoc false
+
+  """
+  Top-level entry point for the deft compiler.
+  """
+
   alias LiveData.Tracked.FlatAst
   alias LiveData.Tracked.Util
 

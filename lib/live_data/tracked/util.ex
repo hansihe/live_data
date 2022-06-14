@@ -1,4 +1,6 @@
 defmodule LiveData.Tracked.Util do
+  @moduledoc false
+
   def decompose_call!(kind, {:when, _opts, [call, _guard]}, env) do
     decompose_call!(kind, call, env)
   end

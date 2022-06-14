@@ -1,7 +1,11 @@
 defmodule LiveData.Tracked.FlatAst.Expr.Fn do
+  @moduledoc false
+
   defstruct arity: nil, clauses: [], location: nil
 
   defmodule Clause do
+    @moduledoc false
+
     defstruct patterns: nil, binds: nil, guard: nil, body: nil, location: nil
   end
 

@@ -1,5 +1,6 @@
 defmodule LiveData.Channel do
   @moduledoc false
+
   use GenServer, restart: :temporary
 
   require Logger

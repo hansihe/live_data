@@ -1,5 +1,7 @@
 defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
-  @moduledoc """
+  @moduledoc false
+
+  """
   First pass of rewriting.
 
   This will traverse the function from the return position, constructing the

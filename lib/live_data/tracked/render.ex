@@ -1,4 +1,6 @@
 defmodule LiveData.Tracked.Render do
+  @moduledoc false
+
   alias LiveData.Tracked
   alias LiveData.Tracked.Tree
   alias LiveData.Tracked.RenderTree
