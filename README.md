@@ -6,7 +6,7 @@ LiveData makes it easy to add efficient live updating or interactivity to your e
 
 A core concept in LiveData is a tracked function, declared using `deft` instead of the regular `def`. Tracked functions make is possible to separate out static parts of your data structure at compile time, only sending them to the client once.
 
-Values in a `deft` can also be marked with a key using `keyed`. This approach is inspired by frameworks like React, and makes it possible for the LiveData runtime to efficiently detect changes in your data without having to do an inefficient tree diff.
+Values in a `deft` can also be marked with a key using [`keyed`](https://hexdocs.pm/live_data/LiveData.html#module-keys). This approach is inspired by frameworks like React, and makes it possible for the LiveData runtime to efficiently detect changes in your data without having to do an inefficient tree diff.
 
 ```elixir
 defmodule DataViewDemo.SimpleData do
