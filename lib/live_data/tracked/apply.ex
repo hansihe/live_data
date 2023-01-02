@@ -1,11 +1,9 @@
 defmodule LiveData.Tracked.Apply do
   @moduledoc false
 
-  """
-  Elixir utility for rendering out ops to a final data structure.
-
-  Used by tests.
-  """
+  # Elixir utility for rendering out ops to a final data structure.
+  #
+  # Used by tests.
 
   alias LiveData.Tracked.Tree
 

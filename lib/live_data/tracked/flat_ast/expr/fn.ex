@@ -1,5 +1,9 @@
 defmodule LiveData.Tracked.FlatAst.Expr.Fn do
-  @moduledoc false
+  @moduledoc """
+  Corresponds to several things in the Elixir AST:
+  * A `fn -> _ end` construct, represented as `{:fn, _, clauses}`.
+  * The root of a `def`/`defp`. This is special-cased in the Elixir AST.
+  """
 
   defstruct arity: nil, clauses: [], location: nil
 

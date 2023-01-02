@@ -1,5 +1,8 @@
 defmodule LiveData.Tracked.FlatAst.Expr.Case do
-  @moduledoc false
+  @moduledoc """
+  Corresponds to a case expression in the Elixir AST. Represented as
+  `{:case, _, [value, [do: clauses]]}`.
+  """
 
   defstruct value: nil, location: nil, clauses: []
 

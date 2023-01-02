@@ -1,7 +1,5 @@
 defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
-  @moduledoc false
-
-  """
+  @moduledoc """
   Third subpass of rewriting.
 
   This will take the data collected in the two first passes, and perform the

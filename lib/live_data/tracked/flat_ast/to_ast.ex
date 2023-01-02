@@ -1,5 +1,7 @@
 defmodule LiveData.Tracked.FlatAst.ToAst do
-  @moduledoc false
+  @moduledoc """
+  Module which converts a FlatAst to an Elixir AST.
+  """
 
   alias LiveData.Tracked.FlatAst
   alias LiveData.Tracked.FlatAst.Expr
@@ -70,6 +72,7 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
             Map.put(gen, sub, var)
           end)
 
+        # TODO handle guards
         nil = clause.guard
 
         {body_ast, gen} = to_expr(clause.body, gen, ast, scope_mode, opts)
@@ -199,6 +202,7 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
             Map.put(gen, sub, var)
           end)
 
+        # TODO handle guards
         nil = clause.guard
 
         {body_ast, gen} = to_expr(clause.body, gen, ast, scope_mode, opts)
@@ -212,7 +216,14 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
   end
 
   def to_expr_inner(%Expr.For{} = expr, {:expr, eid}, gen, ast, scope_mode, opts) do
-    nil = expr.into
+    # TODO
+    # We currently do not handle into.
+    # Just assert that we collect into an empty list.
+    case expr.into do
+      nil -> nil
+      {:literal, _lit} = literal_id ->
+        {:literal, []} = FlatAst.get(ast, literal_id)
+    end
 
     {items, gen} =
       expr.items

@@ -1,7 +1,5 @@
 defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.ExpandDependencies do
-  @moduledoc false
-
-  """
+  @moduledoc """
   Second subpass of rewriting.
 
   Given a set of initial nodes, will collect a set of all cumulative

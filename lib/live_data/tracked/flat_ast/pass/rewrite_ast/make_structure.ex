@@ -1,7 +1,5 @@
 defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
-  @moduledoc false
-
-  """
+  @moduledoc """
   First pass of rewriting.
 
   This will traverse the function from the return position, constructing the
@@ -101,13 +99,23 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
 
         StaticsAgent.add_slot(state, static_id, call_expr_id)
 
+      {{:literal, LiveData.Tracked.Dummy}, {:literal, :custom_fragment_stub}} ->
+        [_custom_fragment_id] = expr.args
+        # TODO: Reference the custom fragment
+        throw "todo"
+
+      {{:literal, LiveData.Tracked.Dummy}, {:literal, :hook_stub}} ->
+        [_hook_module, _subtrees] = expr.args
+        # TODO: Reference the hook
+        throw "todo"
+
       _ ->
         :ok = StaticsAgent.add_dependencies(state, [expr_id])
         StaticsAgent.add_slot(state, static_id, expr_id)
     end
   end
 
-  def rewrite_make_structure_rec(%Expr.MakeMap{prev: nil} = expr, _expr_id, ast, static_id, state) do
+  def rewrite_make_structure_rec(%Expr.MakeMap{struct: nil, prev: nil} = expr, _expr_id, ast, static_id, state) do
     kvs_static =
       Enum.map(expr.kvs, fn {key, val} ->
         key_rewrite = rewrite_make_structure_rec(key, ast, static_id, state)
@@ -139,7 +147,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
 
   def rewrite_make_structure_rec(%Expr.MakeBinary{} = expr, expr_id, ast, static_id, state) do
     if Enum.all?(expr.components, fn
-      {expr, {:binary, _, _}} -> true
+      {_expr, {:binary, _, _}} -> true
       _ -> false
     end) do
       # Only :binary specifiers! We can discard them and convert into a :make_binary

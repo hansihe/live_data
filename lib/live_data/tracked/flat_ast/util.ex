@@ -227,6 +227,12 @@ defmodule LiveData.Tracked.FlatAst.Util do
   end
 
   def transform_expr(%Expr.MakeMap{} = expr, acc, fun) do
+    {new_struct, acc} = if expr.struct do
+      fun.(:value, :struct, expr.struct, acc)
+    else
+      {nil, acc}
+    end
+
     {new_prev, acc} = if expr.prev do
       fun.(:value, :prev, expr.prev, acc)
     else
@@ -244,6 +250,7 @@ defmodule LiveData.Tracked.FlatAst.Util do
 
     new_expr = %{
       expr |
+      struct: new_struct,
       prev: new_prev,
       kvs: new_kvs
     }

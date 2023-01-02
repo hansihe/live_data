@@ -1,22 +1,47 @@
 defmodule LiveData.Tracked.Compiler do
   @moduledoc false
 
-  """
-  Top-level entry point for the deft compiler.
-  """
+  # Top-level entry point for the deft compiler.
 
   alias LiveData.Tracked.FlatAst
   alias LiveData.Tracked.Util
 
-  def compile(module, {name, arity} = fun, kind, _meta, clauses) do
+  def compile(module, file, {name, arity} = fun, kind, meta, clauses) do
+    try do
+      compile_inner(module, fun, kind, meta, clauses)
+    rescue
+      e ->
+        if LiveData.debug_compiler_exceptions? do
+          IO.puts("================ INTERNAL DEFT COMPILER ERROR ================")
+          IO.puts("Internal error in deft compiler while compiling `#{module}.#{name}/#{arity}`.")
+          IO.puts("==============================================================")
+          reraise e, __STACKTRACE__
+        else
+          line = Keyword.get(meta, :line)
+          raise %CompileError{
+            file: file,
+            line: line,
+            description: """
+            Internal error in LiveData deft compiler while compiling `#{module}.#{name}/#{arity}`.
+            This is a bug in LiveData. Please submit an issue at https://github.com/hansihe/live_data.
+            Make sure to include the source code of the function named above in the issue.
+            """,
+          }
+        end
+    end
+  end
+
+  defp compile_inner(module, {name, arity} = fun, kind, _meta, clauses) do
     full_mfa = {module, name, arity}
 
     meta_fun_name = String.to_atom("__tracked_meta__#{name}__#{arity}__")
     tracked_fun_name = String.to_atom("__tracked__#{name}__")
 
+    if LiveData.debug_prints?(), do: IO.inspect(clauses, label: :elixir_ast_clauses, limit: :infinity)
+
     {:ok, ast} = FlatAst.FromAst.from_clauses(clauses)
     ast = FlatAst.Pass.Normalize.normalize(ast)
-    if LiveData.debug_prints?(), do: IO.inspect ast, limit: :infinity
+    if LiveData.debug_prints?(), do: IO.inspect(ast, label: :normalized_flat_ast, limit: :infinity)
 
     nesting = FlatAst.Pass.CalculateNesting.calculate_nesting(ast)
 

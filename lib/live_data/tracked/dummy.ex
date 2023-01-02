@@ -1,13 +1,11 @@
 defmodule LiveData.Tracked.Dummy do
   @moduledoc false
 
-  """
-  This is the module where the actual implementations for the
-  marker functions used in deft functions live.
-
-  These should not be used directly by the user, they are
-  automatically imported into scope inside deft blocks.
-  """
+  # This is the module where the actual implementations for the
+  # marker functions used in deft functions live.
+  #
+  # These should not be used directly by the user, they are
+  # automatically imported into scope inside deft blocks.
 
   defp make_tracked_fn_atom_ast(name) when is_atom(name) do
     atom_str = "__tracked__#{Atom.to_string(name)}__"
@@ -49,6 +47,18 @@ defmodule LiveData.Tracked.Dummy do
     end
   end
 
+  defmacro custom_fragment(fragment_id) do
+    quote do
+      unquote(__MODULE__).custom_fragment_stub(unquote(fragment_id))
+    end
+  end
+
+  defmacro hook(hook_module, subtrees \\ []) do
+    quote do
+      unquote(__MODULE__).hook_stub(unquote(hook_module), unquote(subtrees))
+    end
+  end
+
   @doc false
   def keyed_stub(_key, _expr) do
     raise "unreachable"
@@ -56,6 +66,16 @@ defmodule LiveData.Tracked.Dummy do
 
   @doc false
   def track_stub(_inner) do
+    raise "unreachable"
+  end
+
+  @doc false
+  def custom_fragment_stub(_fragment_id) do
+    raise "unreachable"
+  end
+
+  @doc false
+  def hook_stub(_hook_module, _subtrees) do
     raise "unreachable"
   end
 

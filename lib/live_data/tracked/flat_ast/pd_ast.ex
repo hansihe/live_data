@@ -1,5 +1,11 @@
 defmodule LiveData.Tracked.FlatAst.PDAst do
-  @moduledoc false
+  @moduledoc """
+  Utility module which stores a FlatAst in the process dictionary and
+  provides a more imperative way of mutating it.
+
+  From an external caller point of view, this looks pretty much exactly
+  similar to using an Agent.
+  """
 
   alias LiveData.Tracked.FlatAst
 

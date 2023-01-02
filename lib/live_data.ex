@@ -52,6 +52,7 @@ defmodule LiveData do
   ```elixir
   deft render(assigns) do
     for user <- assigns[:users] do
+      # Bad! No key provided
       %{
         id: user.id,
         name: user.name,
@@ -71,6 +72,7 @@ defmodule LiveData do
   ```elixir
   deft render(assigns) do
     for user <- assigns[:users] do
+      # Good! Key provided with `keyed` macro
       keyed user.id, %{
         id: user.id,
         name: user.name,
@@ -111,5 +113,6 @@ defmodule LiveData do
     %{socket | assigns: assigns}
   end
 
-  def debug_prints?, do: false
+  def debug_prints?, do: true
+  def debug_compiler_exceptions?, do: false
 end

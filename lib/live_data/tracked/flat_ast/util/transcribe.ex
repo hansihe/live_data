@@ -1,5 +1,10 @@
 defmodule LiveData.Tracked.FlatAst.Util.Transcribe do
-  @moduledoc false
+  @moduledoc """
+  Utilities for transcribing an expression from an input AST to an output AST.
+
+  Used by the RewriteAst.RewriteScope to transcribe over expressions that haven't
+  been rewritten by the pass.
+  """
 
   alias LiveData.Tracked.FlatAst
   alias LiveData.Tracked.FlatAst.Expr

@@ -1,5 +1,7 @@
 defmodule LiveData.Tracked.FlatAst.Expr.MakeBinary do
-  @moduledoc false
+  @moduledoc """
+  Corresponds to binary construction in the Elixir AST. Represented as `{:<<>>, _, elems}`.
+  """
 
   defstruct components: [], location: nil
 

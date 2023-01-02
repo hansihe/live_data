@@ -1,5 +1,14 @@
 defmodule LiveData.Tracked.FlatAst do
-  @moduledoc false
+  @moduledoc """
+  Base implementation of the FlatAst.
+
+  FlatAst is a different representation of an Elixir AST where every node
+  has an ID, and all nodes are stored in a flat map. This is in contrast to
+  the regular Elixir AST, where nodes have no ID and are represented as an
+  explicit tree with nesting.
+
+  Contains utilities for converting from and to the regular Elixir AST.
+  """
 
   defstruct exprs: %{},
             patterns: %{},

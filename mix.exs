@@ -71,6 +71,24 @@ defmodule LiveData.MixProject do
       Encodings: [
         LiveData.Tracked.Encoding.JSON,
         LiveData.Tracked.Encoding.Binary
+      ],
+      Internal: [
+        LiveData.Tracked.FlatAst,
+        LiveData.Tracked.FlatAst.FromAst,
+        LiveData.Tracked.FlatAst.ToAst,
+        LiveData.Tracked.FlatAst.Expr.Scope,
+        LiveData.Tracked.FlatAst.Expr.Block,
+        LiveData.Tracked.FlatAst.Expr.AccessField,
+        LiveData.Tracked.FlatAst.Expr.CallMF,
+        LiveData.Tracked.FlatAst.Pass.Normalize,
+        LiveData.Tracked.FlatAst.Pass.CalculateNesting,
+        LiveData.Tracked.FlatAst.Pass.RewriteAst,
+        LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure,
+        LiveData.Tracked.FlatAst.Pass.RewriteAst.ExpandDependencies,
+        LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope,
+        LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent,
+        LiveData.Tracked.FlatAst.PDAst,
+        LiveData.Tracked.FlatAst.Util.Transcribe,
       ]
     ]
   end

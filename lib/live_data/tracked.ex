@@ -47,6 +47,8 @@ defmodule LiveData.Tracked do
   end
 
   defmacro __before_compile__(env) do
+    file = env.file
+
     functions =
       env.module
       |> Module.get_attribute(:phoenix_data_view_tracked)
@@ -55,7 +57,7 @@ defmodule LiveData.Tracked do
       |> Map.keys()
 
     for {module, name} <- functions do
-      define(module, name)
+      define(module, file, name)
     end
   end
 
@@ -69,10 +71,10 @@ defmodule LiveData.Tracked do
     end
   end
 
-  defp define(module, {_name, _arity} = fun) do
+  defp define(module, file, {_name, _arity} = fun) do
     {:v1, kind, meta, clauses} = Elixir.Module.get_definition(module, fun)
 
-    compiled = Compiler.compile(module, fun, kind, meta, clauses)
+    compiled = Compiler.compile(module, file, fun, kind, meta, clauses)
 
     quote do
       Elixir.Module.delete_definition(unquote(module), unquote(fun))
@@ -83,7 +85,7 @@ defmodule LiveData.Tracked do
   defp make_main_fun(kind, call, body, env) do
     wrapped_body =
       quote do
-        import LiveData.Tracked.Dummy, only: [keyed: 2, track: 1]
+        import LiveData.Tracked.Dummy, only: [keyed: 2, track: 1, hook: 1, hook: 2, custom_fragment: 1]
         unquote(body)
       end
 

@@ -20,7 +20,7 @@ defmodule LiveData.Tracked.Diff do
     state = put_in(state.fragments[id], new_data)
 
     case old do
-      {:ok, old_data} ->
+      {:ok, _old_data} ->
         {[op], state}
 
         #patches = diff_data(old_data, new_data)

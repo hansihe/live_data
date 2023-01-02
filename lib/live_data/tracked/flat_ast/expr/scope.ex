@@ -1,7 +1,5 @@
 defmodule LiveData.Tracked.FlatAst.Expr.Scope do
-  @moduledoc false
-
-  """
+  @moduledoc """
   In many ways similar to `Expr.Block`, but with different semantics in codegen.
   Whereas `Expr.Block` corresponds 1:1 to `:__block__` in the native Elixir AST,
   this has different behaviour.

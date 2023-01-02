@@ -1,5 +1,6 @@
 defmodule LiveData.Tracked.Encoding.Binary do
   alias LiveData.Tracked.Tree
+  alias LiveData.Tracked.Render
 
   @op_render 0
   @op_put_fragment 1

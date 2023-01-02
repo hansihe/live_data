@@ -1,5 +1,9 @@
 defmodule LiveData.Tracked.FlatAst.Expr.For do
-  @moduledoc false
+  @moduledoc """
+  Corresponds to `for` list comprehension in the Elixir AST. Represented as `{:for, _, specifiers}`.
+
+  NOTE: `uniq` and `reduce` are currently not implemented, they are TODOs.
+  """
 
   defstruct items: nil, into: nil, inner: nil, location: nil
 

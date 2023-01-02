@@ -1,5 +1,7 @@
 defmodule LiveData.Tracked.FlatAst.Expr.AccessField do
-  @moduledoc false
+  @moduledoc """
+  Corresponds to field access in the Elixir AST. Represented as `{:., _opts, [value, field]}`.
+  """
 
   defstruct top: nil, field: nil, location: nil
 

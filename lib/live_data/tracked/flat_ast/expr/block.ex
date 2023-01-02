@@ -1,5 +1,9 @@
 defmodule LiveData.Tracked.FlatAst.Expr.Block do
-  @moduledoc false
+  @moduledoc """
+  Corresponds 1:1 with a block in the Elixir AST. Represented as a list.
+
+  Does NOT imply a scope for variable resolution.
+  """
 
   defstruct exprs: [], location: nil
 

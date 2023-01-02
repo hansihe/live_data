@@ -1,8 +1,25 @@
 defmodule LiveData.Tracked.FlatAst.FromAst do
-  @moduledoc false
+  @moduledoc """
+  Module which converts a regular Elixir AST to a FlatAst.
+  """
 
   alias LiveData.Tracked.FlatAst.Expr
   alias LiveData.Tracked.FlatAst.PDAst
+
+  defp norm_items(items) do
+    Enum.reverse(norm_items_rec(items, []))
+  end
+
+  defp norm_items_rec([[_ | _] = inner | tail], acc) do
+    acc = norm_items_rec(inner, acc)
+    norm_items_rec(tail, acc)
+  end
+  defp norm_items_rec([head | tail], acc) do
+    norm_items_rec(tail, [head | acc])
+  end
+  defp norm_items_rec([], acc) do
+    acc
+  end
 
   def from_clauses([first_clause | _] = clauses) do
     {:ok, out} = PDAst.init()
@@ -135,8 +152,26 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     {expr_id, scope}
   end
 
-  def from_expr({:%{}, opts, kvs}, scope, out) do
-    {kv_exprs, _scope} =
+  def from_expr({:%, opts, [struct_expr, {:%{}, _, _} = map_expr]}, scope, out) do
+    {struct_expr, scope} = from_expr(struct_expr, scope, out)
+    from_map_root_expr(struct_expr, map_expr, scope, out)
+  end
+
+  def from_expr({:%{}, _, _} = map_expr, scope, out) do
+    from_map_root_expr(nil, map_expr, scope, out)
+  end
+
+  def from_map_root_expr(struct_expr, {:%{}, opts, [{:|, _opts, [prior, kvs]}]}, scope, out) do
+    {prior_expr, scope} = from_expr(prior, scope, out)
+    from_map_expr(struct_expr, prior_expr, opts, kvs, scope, out)
+  end
+
+  def from_map_root_expr(struct_expr, {:%{}, opts, kvs}, scope, out) do
+    from_map_expr(struct_expr, nil, opts, kvs, scope, out)
+  end
+
+  def from_map_expr(struct_expr, prior_expr, opts, kvs, scope, out) do
+    {kv_exprs, scope} =
       Enum.map_reduce(kvs, scope, fn {key, value}, scope ->
         {key_expr, scope} = from_expr(key, scope, out)
         {value_expr, scope} = from_expr(value, scope, out)
@@ -145,7 +180,7 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
       end)
 
     location = make_location(opts)
-    expr_id = PDAst.add_expr(out, Expr.MakeMap.new(nil, kv_exprs, location))
+    expr_id = PDAst.add_expr(out, Expr.MakeMap.new(struct_expr, prior_expr, kv_exprs, location))
 
     {expr_id, scope}
   end
@@ -196,20 +231,25 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
   def from_expr({:for, opts, items}, scope, out) do
     outer_scope = scope
 
+    items = norm_items(items)
     grouped_items =
       Enum.group_by(items, fn
-        [{:into, _}] -> :meta
-        [{:do, _}] -> :meta
+        {:into, _} -> :meta
+        {:do, _} -> :meta
+        {:uniq, _} -> :meta
+        {:reduce, _} -> :meta
+        {_, _} -> throw "unrecognized key!"
         _ -> :loop
       end)
 
-    meta_items =
-      Map.get(grouped_items, :meta, [])
-      |> Enum.map(fn [kv] -> kv end)
-
+    meta_items = Map.get(grouped_items, :meta, [])
     loop_items = Map.get(grouped_items, :loop, [])
 
     into = Keyword.get(meta_items, :into, nil)
+
+    # TODO
+    nil = Keyword.get(meta_items, :uniq, nil)
+    nil = Keyword.get(meta_items, :reduce, nil)
 
     into_expr =
       if into do

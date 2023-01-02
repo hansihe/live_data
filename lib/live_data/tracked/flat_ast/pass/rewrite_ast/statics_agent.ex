@@ -1,5 +1,8 @@
 defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent do
-  @moduledoc false
+  @moduledoc """
+  StaticsAgent is an agent process which collects information about statics
+  during the execution of the MakeStructure subpass.
+  """
 
   alias LiveData.Tracked.Tree.Slot
 
@@ -74,6 +77,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent do
         nil -> nil
         {:expr, _eid} = expr_id -> expr_id
         {:expr_bind, eid, _selector} -> {:expr, eid}
+        {:literal, _lid} = literal_id -> literal_id
       end)
 
       update_in(state.dependencies, &MapSet.union(&1, MapSet.new(canonical_exprs)))
