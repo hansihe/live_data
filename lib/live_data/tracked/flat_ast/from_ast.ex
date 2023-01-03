@@ -152,37 +152,12 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     {expr_id, scope}
   end
 
-  def from_expr({:%, opts, [struct_expr, {:%{}, _, _} = map_expr]}, scope, out) do
-    {struct_expr, scope} = from_expr(struct_expr, scope, out)
-    from_map_root_expr(struct_expr, map_expr, scope, out)
+  # Map stuff, handled in clauses below because of complexity
+  def from_expr({:%, _, [_, {:%{}, _, _}]} = expr, scope, out) do
+    from_map_expr(expr, scope, out)
   end
-
-  def from_expr({:%{}, _, _} = map_expr, scope, out) do
-    from_map_root_expr(nil, map_expr, scope, out)
-  end
-
-  def from_map_root_expr(struct_expr, {:%{}, opts, [{:|, _opts, [prior, kvs]}]}, scope, out) do
-    {prior_expr, scope} = from_expr(prior, scope, out)
-    from_map_expr(struct_expr, prior_expr, opts, kvs, scope, out)
-  end
-
-  def from_map_root_expr(struct_expr, {:%{}, opts, kvs}, scope, out) do
-    from_map_expr(struct_expr, nil, opts, kvs, scope, out)
-  end
-
-  def from_map_expr(struct_expr, prior_expr, opts, kvs, scope, out) do
-    {kv_exprs, scope} =
-      Enum.map_reduce(kvs, scope, fn {key, value}, scope ->
-        {key_expr, scope} = from_expr(key, scope, out)
-        {value_expr, scope} = from_expr(value, scope, out)
-
-        {{key_expr, value_expr}, scope}
-      end)
-
-    location = make_location(opts)
-    expr_id = PDAst.add_expr(out, Expr.MakeMap.new(struct_expr, prior_expr, kv_exprs, location))
-
-    {expr_id, scope}
+  def from_expr({:%{}, _, _} = expr, scope, out) do
+    from_map_expr(expr, scope, out)
   end
 
   def from_expr({:fn, opts, clauses}, scope, out) do
@@ -397,24 +372,24 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     {expr_id, scope}
   end
 
-  def from_expr({{:., _opts1, [module, function]}, opts, args}, scope, out)
+  def from_expr({{:., opts2, [module, function]}, opts1, args}, scope, out)
       when is_atom(module) and is_atom(function) do
     {module_expr, scope} = from_expr(module, scope, out)
     {function_expr, scope} = from_expr(function, scope, out)
 
     {arg_exprs, scope} = Enum.map_reduce(args, scope, &from_expr(&1, &2, out))
 
-    location = make_location(opts)
+    location = make_merge_locations([opts1, opts2])
     expr_id = PDAst.add_expr(out, Expr.CallMF.new(
           module_expr, function_expr, arg_exprs, location))
 
     {expr_id, scope}
   end
 
-  def from_expr({{:., opts, [top, field]}, _opts2, []}, scope, out) when is_atom(field) do
+  def from_expr({{:., opts2, [top, field]}, opts1, []}, scope, out) when is_atom(field) do
     {top_expr, scope} = from_expr(top, scope, out)
 
-    location = make_location(opts)
+    location = make_merge_locations([opts1, opts2])
     expr_id = PDAst.add_expr(out, Expr.AccessField.new(
           top_expr, field, location))
 
@@ -424,6 +399,51 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
   def from_expr(_expr, _scope, _out) do
     raise "unhandled clause"
   end
+
+  # Map stuff
+
+  # `from_map_expr` is just called directly from from_expr in case we are making a map.
+  # It handles the struct part of map construction, and calls down into
+  # `from_map_prior_expr`.
+  def from_map_expr({:%, opts, [struct_expr, {:%{}, _, _} = map_expr]}, scope, out) do
+    loc = make_location(opts)
+    {struct_expr, scope} = from_expr(struct_expr, scope, out)
+    from_map_prior_expr(struct_expr, map_expr, loc, scope, out)
+  end
+  def from_map_expr({:%{}, opts, _} = map_expr, scope, out) do
+    loc = make_location(opts)
+    from_map_prior_expr(nil, map_expr, loc, scope, out)
+  end
+
+  # `from_map_prior_expr` handles the prior map part of map construction (`|`).
+  # It calls into `from_map_inner_expr`.
+  def from_map_prior_expr(struct_expr, {:%{}, opts1, [{:|, opts2, [prior, kvs]}]}, loc1, scope, out) do
+    loc2 = merge_location(make_location(opts1), make_location(opts2))
+    loc = merge_location(loc1, loc2)
+    {prior_expr, scope} = from_expr(prior, scope, out)
+    from_map_inner_expr(struct_expr, prior_expr, loc, kvs, scope, out)
+  end
+  def from_map_prior_expr(struct_expr, {:%{}, opts, kvs}, loc1, scope, out) do
+    loc = merge_location(loc1, make_location(opts))
+    from_map_inner_expr(struct_expr, nil, loc, kvs, scope, out)
+  end
+
+  # `from_map_inner_expr` handles the key-value portion of map construction.
+  def from_map_inner_expr(struct_expr, prior_expr, loc, kvs, scope, out) do
+    {kv_exprs, scope} =
+      Enum.map_reduce(kvs, scope, fn {key, value}, scope ->
+        {key_expr, scope} = from_expr(key, scope, out)
+        {value_expr, scope} = from_expr(value, scope, out)
+
+        {{key_expr, value_expr}, scope}
+      end)
+
+    expr_id = PDAst.add_expr(out, Expr.MakeMap.new(struct_expr, prior_expr, kv_exprs, loc))
+
+    {expr_id, scope}
+  end
+
+  # Pattern stuff
 
   def handle_patterns(patterns, scope, out) do
     args_pats = Enum.map(patterns, &from_pattern(&1, [], scope, out))
@@ -449,6 +469,21 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     counter = Keyword.get(opts, :counter)
     {name, counter, ctx}
   end
+
+  defp make_merge_locations(locations) do
+    Enum.reduce(locations, {nil, nil}, fn
+      opts, acc ->
+        loc = make_location(opts)
+        merge_location(acc, loc)
+    end)
+  end
+
+  defp merge_location(nil, loc2) when loc2 != nil, do: loc2
+  defp merge_location(loc1, nil) when loc1 != nil, do: loc1
+  defp merge_location(nil, nil), do: {nil, nil}
+  defp merge_location({nil, _}, loc2), do: loc2
+  defp merge_location({_, nil}, {_, col2} = loc2) when col2 != nil, do: loc2
+  defp merge_location(loc1, _loc2), do: loc1
 
   defp make_location(opts) do
     line = Keyword.get(opts, :line)

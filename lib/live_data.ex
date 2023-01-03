@@ -113,6 +113,5 @@ defmodule LiveData do
     %{socket | assigns: assigns}
   end
 
-  def debug_prints?, do: true
-  def debug_compiler_exceptions?, do: false
+  def debug_prints?, do: Application.get_env(:live_data, :deft_compiler_debug_prints, false)
 end

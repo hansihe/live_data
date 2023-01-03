@@ -8,30 +8,24 @@ defmodule LiveData.Tracked.Compiler do
 
   def compile(module, file, {name, arity} = fun, kind, meta, clauses) do
     try do
-      compile_inner(module, fun, kind, meta, clauses)
+      compile_inner(module, file, fun, kind, meta, clauses)
     rescue
+      e in CompileError ->
+        # We strip the full stacktrace because it is not relevant to a reported
+        # compiler error, it would not add any relevant context and would only
+        # contribute visual noise.
+        reraise e, []
       e ->
-        if LiveData.debug_compiler_exceptions? do
-          IO.puts("================ INTERNAL DEFT COMPILER ERROR ================")
-          IO.puts("Internal error in deft compiler while compiling `#{module}.#{name}/#{arity}`.")
-          IO.puts("==============================================================")
-          reraise e, __STACKTRACE__
-        else
-          line = Keyword.get(meta, :line)
-          raise %CompileError{
-            file: file,
-            line: line,
-            description: """
-            Internal error in LiveData deft compiler while compiling `#{module}.#{name}/#{arity}`.
-            This is a bug in LiveData. Please submit an issue at https://github.com/hansihe/live_data.
-            Make sure to include the source code of the function named above in the issue.
-            """,
-          }
-        end
+        IO.puts("================ INTERNAL DEFT COMPILER ERROR ================")
+        IO.puts("Internal error in LiveData deft compiler while compiling `#{module}.#{name}/#{arity}` in `#{file}`.")
+        IO.puts("This is a bug in LiveData. Please submit an issue at https://github.com/hansihe/live_data.")
+        IO.puts("Make sure to include the source code of the function named above in the issue.")
+        IO.puts("==============================================================")
+        reraise e, __STACKTRACE__
     end
   end
 
-  defp compile_inner(module, {name, arity} = fun, kind, _meta, clauses) do
+  defp compile_inner(module, file, {name, arity} = fun, kind, _meta, clauses) do
     full_mfa = {module, name, arity}
 
     meta_fun_name = String.to_atom("__tracked_meta__#{name}__#{arity}__")
@@ -58,6 +52,8 @@ defmodule LiveData.Tracked.Compiler do
 
     {:ok, new_ast, statics} = FlatAst.Pass.RewriteAst.rewrite(
       ast, full_mfa, nesting_set)
+
+    :ok = FlatAst.Pass.ErrorOnStub.error_on_stub(new_ast, file)
 
     expr = FlatAst.ToAst.to_expr(new_ast, pretty: true)
     tracked_defs = Util.fn_to_defs(expr, tracked_fun_name)

@@ -1,5 +1,6 @@
 defmodule LiveData.Tracked.TreeTest do
   use ExUnit.Case
+  import LiveData.Tracked.TestHelpers
 
   alias LiveData.Tracked.Render
   alias LiveData.Tracked.Apply
@@ -7,43 +8,42 @@ defmodule LiveData.Tracked.TreeTest do
   alias LiveData.Tracked.Tree
   alias LiveData.Tracked.Encoding
 
-  use LiveData.Tracked
+  def make_module() do
+    {:ok, module} = try_define_module do
+      use LiveData.Tracked
 
-  deft render(assigns) do
-    %{
-      categories:
-        for category <- assigns.categories do
-          keyed category.id do
-            %{
-              posts:
-                for post <- category.posts do
-                  keyed(post.id, track(render_post(post)))
-                end
-            }
-          end
-        end
-    }
+      deft render(assigns) do
+        %{
+          categories:
+            for category <- assigns.categories do
+              keyed category.id do
+                %{
+                  posts:
+                    for post <- category.posts do
+                      keyed(post.id, track(render_post(post)))
+                    end
+                }
+              end
+            end
+        }
+      end
+
+      deft render_post(post) do
+        %{
+          title: post.title,
+          content: post.text,
+          postcode: post.postcode
+        }
+      end
+    end
+
+    module
   end
-
-  deft render_post(post) do
-    %{
-      title: post.title,
-      content: post.text,
-      postcode: post.postcode
-    }
-  end
-
-  deft woop(assigns) do
-    IO.inspect(assigns, label: :assigns_in_render)
-    %{
-      foo: 1
-    }
-  end
-
-  #use FlutterView
 
   @tag :skip
-  test "yay" do
+  test "temporary test" do
+    module = make_module()
+
     assigns = %{
       categories: [
         %{
@@ -59,9 +59,9 @@ defmodule LiveData.Tracked.TreeTest do
       ]
     }
 
-    IO.inspect __tracked_meta__render__1__(:statics)
+    IO.inspect module.__tracked_meta__render__1__(:statics)
 
-    out = __tracked__render__(assigns)
+    out = module.__tracked__render__(assigns)
     IO.inspect out
     IO.inspect out.render.()
   end
@@ -169,9 +169,11 @@ defmodule LiveData.Tracked.TreeTest do
 
   @tag :skip
   test "foobar" do
+    module = make_module()
+
     state = %{ids: %{}, visited: %{}, counter: 0}
     #%{ids: keyed_ids} = __tracked_ids_render_1__(state)
-    statics = __tracked_meta__render__1__(:statics)
+    statics = module.__tracked_meta__render__1__(:statics)
 
     assigns = %{
       categories: [
@@ -258,7 +260,7 @@ defmodule LiveData.Tracked.TreeTest do
     encoder = Encoding.JSON.new()
     apply_state = Apply.new()
 
-    rendered = __tracked__render__(assigns)
+    rendered = module.__tracked__render__(assigns)
     {ops1, tree_state} = Tree.render(rendered, tree_state)
 
     IO.inspect(ops1)
@@ -309,7 +311,7 @@ defmodule LiveData.Tracked.TreeTest do
       ]
     }
 
-    rendered = __tracked__render__(assigns)
+    rendered = module.__tracked__render__(assigns)
     {ops2, tree_state} = Tree.render(rendered, tree_state)
 
     IO.inspect(ops2)

@@ -84,6 +84,10 @@ defmodule LiveData.Tracked.FlatAst do
     %{ast | variables: Map.put(ast.variables, expr_id, variable)}
   end
 
+  def get_literal_id_by_value(ast, value) do
+    Map.fetch(ast.literals_back, value)
+  end
+
   def add_literal(ast, literal) do
     case Map.fetch(ast.literals_back, literal) do
       {:ok, literal_id} ->

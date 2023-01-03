@@ -134,7 +134,8 @@ defmodule LiveData.Tracked.FlatAst.Util do
         fun.(:value, {:arg, idx}, arg, acc)
       end)
 
-    new_expr = %Expr.CallMF{
+    new_expr = %{
+      expr |
       module: new_module,
       function: new_function,
       args: new_args
@@ -295,6 +296,17 @@ defmodule LiveData.Tracked.FlatAst.Util do
         {{new_elem, specifiers}, acc}
       end)
     new_expr = %{expr | components: new_components}
+    {new_expr, acc}
+  end
+
+  def transform_expr(%Expr.MakeStatic{} = expr, acc, fun) do
+    {new_slots, acc} =
+      expr.slots
+      |> Enum.with_index()
+      |> Enum.map_reduce(acc, fn {elem, idx}, acc ->
+        fun.(:value, idx, elem, acc)
+      end)
+    new_expr = %{expr | slots: new_slots}
     {new_expr, acc}
   end
 

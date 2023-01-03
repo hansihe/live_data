@@ -15,11 +15,11 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
   def rewrite_scope(expr_id, data, rewritten, transcribed, out) do
     %Expr.Scope{exprs: scope_exprs} = FlatAst.get(data.ast, expr_id)
     old_rewritten = rewritten
-    if LiveData.debug_prints?() do
-      IO.inspect scope_exprs
-      IO.inspect Enum.filter(scope_exprs, &MapSet.member?(data.dependencies, &1))
-      IO.inspect Enum.filter(scope_exprs, &MapSet.member?(data.traversed, &1))
-    end
+    #if LiveData.debug_prints?() do
+    #  IO.inspect scope_exprs
+    #  IO.inspect Enum.filter(scope_exprs, &MapSet.member?(data.dependencies, &1))
+    #  IO.inspect Enum.filter(scope_exprs, &MapSet.member?(data.traversed, &1))
+    #end
 
     # Step 1: Transcribe dependencies
     {transcribed_exprs, transcribed} =

@@ -83,6 +83,8 @@ defmodule LiveData.Tracked do
   end
 
   defp make_main_fun(kind, call, body, env) do
+    #IO.inspect Macro.Env.lookup_import(env, {:keyed, 2}), label: :lookup_import
+
     wrapped_body =
       quote do
         import LiveData.Tracked.Dummy, only: [keyed: 2, track: 1, hook: 1, hook: 2, custom_fragment: 1]

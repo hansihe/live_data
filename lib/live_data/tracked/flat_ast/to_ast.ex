@@ -150,7 +150,7 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     {{:=, ast_opts, [pattern_ast, rhs_ast]}, gen}
   end
 
-  def to_expr_inner(%Expr.MakeMap{prev: nil, kvs: kvs, location: location}, _expr_id, gen, ast, scope_mode, opts) do
+  def to_expr_inner(%Expr.MakeMap{struct: nil, prev: nil, kvs: kvs, location: location}, _expr_id, gen, ast, scope_mode, opts) do
     {kvs_ast, gen} =
       Enum.map_reduce(kvs, gen, fn {key, value}, gen ->
         {key_ast, gen} = to_expr(key, gen, ast, scope_mode, opts)

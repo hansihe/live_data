@@ -8,11 +8,11 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
   #deft testing do
   #  %{ %{} | foo: :bar}
   #end
-      use LiveData.Tracked
-      defstruct []
-      deft test_struct do
-        %__MODULE__{}
-      end
+      #use LiveData.Tracked
+      #defstruct []
+      #deft test_struct do
+      #  %__MODULE__{}
+      #end
 
   test "maps in deft" do
     {:ok, module} = try_define_module do
