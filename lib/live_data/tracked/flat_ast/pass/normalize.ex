@@ -79,7 +79,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.Normalize do
     {expr.ref_expr, [expr_id], ast}
   end
 
-  def flatten_block_rec_inner({:literal, _lit}, lit_id, ast) do
+  def flatten_block_rec_inner({:literal_value, _lit}, lit_id, ast) do
     {lit_id, [lit_id], ast}
   end
 

@@ -1,4 +1,6 @@
-defmodule LiveData.Tracked.FlatAst.Expr.Var do
+alias LiveData.Tracked.FlatAst.Expr
+
+defmodule Expr.Var do
   @moduledoc false
 
   defstruct ref_expr: nil, location: nil
@@ -9,4 +11,19 @@ defmodule LiveData.Tracked.FlatAst.Expr.Var do
       location: location
     }
   end
+end
+
+defimpl Expr, for: Expr.Var do
+
+  def transform(%Expr.Var{} = expr, acc, fun) do
+    {new_ref_expr, acc} =
+      case expr.ref_expr do
+        {:expr_bind, _eid, _selector} = ref_expr ->
+          fun.(:ref, :ref, ref_expr, acc)
+      end
+
+    new_expr = %{expr | ref_expr: new_ref_expr}
+    {new_expr, acc}
+  end
+
 end

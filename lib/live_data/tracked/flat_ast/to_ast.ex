@@ -50,7 +50,7 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     {var_ast, gen}
   end
 
-  def to_expr_inner({:literal, literal}, _expr_id, gen, _ast, _scope_mode, _opts) do
+  def to_expr_inner({:literal_value, literal}, _expr_id, gen, _ast, _scope_mode, _opts) do
     {literal, gen}
   end
 
@@ -222,7 +222,7 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     case expr.into do
       nil -> nil
       {:literal, _lit} = literal_id ->
-        {:literal, []} = FlatAst.get(ast, literal_id)
+        {:literal_value, []} = FlatAst.get(ast, literal_id)
     end
 
     {items, gen} =
@@ -264,6 +264,11 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     ast_opts = make_opts(location: location)
     var_ast = var_to_expr(var, gen, ast_opts)
     {var_ast, gen}
+  end
+
+  # TODO probably eliminate CallTracked expression in a pass?
+  def to_expr_inner(%Expr.CallTracked{inner: inner}, expr_id, gen, ast, scope_mode, opts) do
+    to_expr_inner(inner, expr_id, gen, ast, scope_mode, opts)
   end
 
   def to_expr_inner(%Expr.CallMF{module: nil} = expr, _expr_id, gen, ast, scope_mode, opts) do

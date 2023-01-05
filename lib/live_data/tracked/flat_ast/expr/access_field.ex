@@ -1,4 +1,6 @@
-defmodule LiveData.Tracked.FlatAst.Expr.AccessField do
+alias LiveData.Tracked.FlatAst.Expr
+
+defmodule Expr.AccessField do
   @moduledoc """
   Corresponds to field access in the Elixir AST. Represented as `{:., _opts, [value, field]}`.
   """
@@ -12,4 +14,15 @@ defmodule LiveData.Tracked.FlatAst.Expr.AccessField do
       location: location
     }
   end
+
+end
+
+defimpl Expr, for: Expr.AccessField do
+
+  def transform(%Expr.AccessField{} = expr, acc, fun) do
+    {new_top, acc} = fun.(:value, :top, expr.top, acc)
+    new_expr = %{expr | top: new_top}
+    {new_expr, acc}
+  end
+
 end

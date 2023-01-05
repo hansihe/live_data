@@ -4,18 +4,8 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
 
   # Maps
 
-  #use LiveData.Tracked
-  #deft testing do
-  #  %{ %{} | foo: :bar}
-  #end
-      #use LiveData.Tracked
-      #defstruct []
-      #deft test_struct do
-      #  %__MODULE__{}
-      #end
-
   test "maps in deft" do
-    {:ok, module} = try_define_module do
+    module = define_module! do
       use LiveData.Tracked
       deft testing(v) do
         %{
@@ -26,7 +16,7 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
   end
 
   test "priors in maps in deft not implemented" do
-    {:error, _, _} = try_define_module do
+    {:error, _, _, _, _} = try_define_module do
       use LiveData.Tracked
       deft testing do
         %{ %{} | foo: :bar}
@@ -35,7 +25,7 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
   end
 
   test "structs not implemented" do
-    {:error, _, _} = try_define_module do
+    {:error, _, _, _, _} = try_define_module do
       use LiveData.Tracked
       defstruct []
       deft testing do
@@ -44,7 +34,23 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
     end
   end
 
-  # Maps
+  # Matching
+
+  test "basic assignment matching" do
+    module = define_module! do
+      use LiveData.Tracked
+
+      deft testing(v) do
+        {:ok, v1} = v
+        %{foo: v1}
+      end
+    end
+
+    value = module.__tracked__testing__({:ok, :yay})
+
+    assert value.template == {:make_map, nil, [{{:literal, :foo}, %LiveData.Tracked.Tree.Slot{num: 0}}]}
+    assert value.slots == [:yay]
+  end
 
 
   #deft map do

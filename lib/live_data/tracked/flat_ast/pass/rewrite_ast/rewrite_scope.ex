@@ -6,6 +6,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
   actual rewriting.
   """
 
+  alias LiveData.Tracked.TraceCollector
   alias LiveData.Tracked.FlatAst
   alias LiveData.Tracked.FlatAst.Expr
   alias LiveData.Tracked.FlatAst.PDAst
@@ -51,21 +52,22 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
         expr = FlatAst.get(data.ast, expr_id)
         rewrite_scope_expr(expr, expr_id, data, rewritten, transcribed, out)
 
-      {:ok, {:unfinished, _ns, [_ret_expr_id], _key}} ->
+      {:ok, %{state: :unfinished, slots: [_ret_expr_id]}} ->
         {[], rewritten}
 
       # Special case, the whole static is useless.
-      {:ok, {:finished, %Slot{num: 0}, [_inner_expr_id], nil}} ->
+      {:ok, %{state: :finished, static_structure: %Slot{num: 0}, slots: [_inner_expr_id], key: nil}} ->
         raise "unimpl"
 
       # rewritten = Map.put(rewritten, expr_id, inner_expr_id)
       # {inner_expr_id, rewritten}
 
-      {:ok, {:finished, static, slots, key}} ->
+      {:ok, %{state: :finished, static_structure: static, slots: slots, key: key}} ->
         new_slots = Enum.map(slots, fn
           {:expr_bind, eid, selector} ->
             expr_id = {:expr, eid}
-            if LiveData.debug_prints?(), do: IO.inspect({rewritten, transcribed})
+            #if LiveData.debug_prints?(), do: IO.inspect({rewritten, transcribed})
+            TraceCollector.log(:rewritten_transcribed, {rewritten, transcribed})
             {:expr, new_eid} = Map.get(rewritten, expr_id) || Map.fetch!(transcribed, expr_id)
             {:expr_bind, new_eid, selector}
 
@@ -138,7 +140,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
   end
 
   def rewrite_resolve({:literal, _lit_id} = literal_id, data, _rewritten, _transcribed, out) do
-    {:literal, literal} = FlatAst.get(data.ast, literal_id)
+    {:literal_value, literal} = FlatAst.get(data.ast, literal_id)
     PDAst.add_literal(out, literal)
   end
 
@@ -149,7 +151,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
   end
 
   def rewrite_scope_resolve({:literal, _lit_id} = literal_id, data, _rewritten, _transcribed, out) do
-    {:literal, literal} = FlatAst.get(data.ast, literal_id)
+    {:literal_value, literal} = FlatAst.get(data.ast, literal_id)
     PDAst.add_literal(out, literal)
   end
 end

@@ -18,6 +18,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst do
      The return value is the rewritten AST.
   """
 
+  alias LiveData.Tracked.TraceCollector
   alias LiveData.Tracked.FlatAst
   alias LiveData.Tracked.FlatAst.Expr
   alias LiveData.Tracked.FlatAst.PDAst
@@ -44,6 +45,8 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst do
         _rewrite_root = __MODULE__.MakeStructure.rewrite_make_structure(clause.body, ast, state)
 
         {:ok, %{statics: statics, traversed: traversed, dependencies: dependencies}} = StaticsAgent.finish(state)
+        #IO.inspect {traversed, dependencies}, label: :travdep
+        TraceCollector.log(:travdep, {traversed, dependencies})
 
         data = %{
           statics: statics,
@@ -77,7 +80,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst do
     statics =
       statics
       |> Enum.map(fn
-        {id, {:finished, structure, _slots, _key}} -> {id, structure}
+        {id, %{state: :finished, static_structure: structure}} -> {id, structure}
         _ -> nil
       end)
       |> Enum.filter(&(&1 != nil))

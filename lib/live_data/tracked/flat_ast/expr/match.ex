@@ -1,4 +1,6 @@
-defmodule LiveData.Tracked.FlatAst.Expr.Match do
+alias LiveData.Tracked.FlatAst.Expr
+
+defmodule Expr.Match do
   @moduledoc false
 
   defstruct pattern: nil, binds: nil, rhs: nil, location: nil
@@ -11,4 +13,16 @@ defmodule LiveData.Tracked.FlatAst.Expr.Match do
       location: location
     }
   end
+end
+
+defimpl Expr, for: Expr.Match do
+
+  def transform(%Expr.Match{} = expr, acc, fun) do
+    {{new_pattern, new_binds}, acc} = fun.(:pattern, :lhs, {expr.pattern, expr.binds}, acc)
+    {new_rhs, acc} = fun.(:value, :rhs, expr.rhs, acc)
+
+    new_expr = %{expr | pattern: new_pattern, binds: new_binds, rhs: new_rhs}
+    {new_expr, acc}
+  end
+
 end

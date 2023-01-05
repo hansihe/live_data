@@ -1,3 +1,5 @@
+alias LiveData.Tracked.FlatAst.Expr
+
 defmodule LiveData.Tracked.FlatAst.Expr.CallMF do
   @moduledoc """
   Corresponds to a call to a `module.function(arg, ..)` in the Elixir AST.
@@ -15,4 +17,35 @@ defmodule LiveData.Tracked.FlatAst.Expr.CallMF do
       location: location
     }
   end
+end
+
+defimpl Expr, for: Expr.CallMF do
+
+  def transform(%Expr.CallMF{} = expr, acc, fun) do
+    {new_module, acc} =
+      if expr.module do
+        fun.(:value, :mod, expr.module, acc)
+      else
+        {nil, acc}
+      end
+
+    {new_function, acc} = fun.(:value, :fun, expr.function, acc)
+
+    {new_args, acc} =
+      expr.args
+      |> Enum.with_index()
+      |> Enum.map_reduce(acc, fn {arg, idx}, acc ->
+        fun.(:value, {:arg, idx}, arg, acc)
+      end)
+
+    new_expr = %{
+      expr |
+      module: new_module,
+      function: new_function,
+      args: new_args
+    }
+
+    {new_expr, acc}
+  end
+
 end

@@ -1,5 +1,4 @@
 defmodule LiveData.Tracked.FlatAst.Pass.ErrorOnStub do
-
   alias LiveData.Tracked.FlatAst
   alias LiveData.Tracked.FlatAst.Expr
   alias LiveData.Tracked.FlatAst.Util
@@ -12,39 +11,38 @@ defmodule LiveData.Tracked.FlatAst.Pass.ErrorOnStub do
   end
 
   def error_on_stub(ast, file) do
-    case FlatAst.get_literal_id_by_value(ast, LiveData.Tracked.Dummy) do
-      {:ok, dummy_module_literal} ->
-        keyed_lit = get_literal_or_nil(ast, :keyed_stub)
-        tracked_lit = get_literal_or_nil(ast, :tracked_stub)
+    dummy_module_lit = get_literal_or_nil(ast, LiveData.Tracked.Dummy)
+    keyed_lit = get_literal_or_nil(ast, :keyed_stub)
+    tracked_lit = get_literal_or_nil(ast, :tracked_stub)
 
-        Util.traverse(ast, ast.root, nil, fn
-          id, %Expr.CallMF{module: ^dummy_module_literal} = expr, nil ->
-            {line, _col} = expr.location
+    Util.traverse(ast, ast.root, nil, fn
+      #_id, %Expr.CallTracked{}
 
-            message = case expr.function do
-              ^keyed_lit ->
-                "deft error: `keyed` used in non-return position"
+      _id, %Expr.CallMF{module: ^dummy_module_lit} = expr, nil when dummy_module_lit != nil ->
+        {line, _col} = expr.location
 
-              ^tracked_lit ->
-                "deft error: `tracked` used in non-return position"
-            end
+        message = case expr.function do
+          ^keyed_lit ->
+            "deft error: `keyed` used in non-return position"
 
-            raise %CompileError{
-              file: file,
-              line: line,
-              description: message
-            }
+          ^tracked_lit ->
+            raise "unreachable"
+            #"deft error: `tracked` used in non-return position"
+        end
 
-            {:handled, nil}
+        raise %CompileError{
+          file: file,
+          line: line,
+          description: message
+        }
 
-          id, expr, nil ->
-            {:continue, nil}
-        end)
-        :ok
+        {:handled, nil}
 
-      :error ->
-        :ok
-    end
+      _id, _expr, nil ->
+        {:continue, nil}
+    end)
+
+    :ok
   end
 
 end

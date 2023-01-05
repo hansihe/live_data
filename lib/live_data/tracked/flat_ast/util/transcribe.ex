@@ -19,7 +19,7 @@ defmodule LiveData.Tracked.FlatAst.Util.Transcribe do
   map of parent transcribed expressions.
   """
   def transcribe({:literal, _} = lit_id, data, map, _backup_resolve, out) do
-    {:literal, lit} = FlatAst.get(data.ast, lit_id)
+    {:literal_value, lit} = FlatAst.get(data.ast, lit_id)
     new_lit_id = PDAst.add_literal(out, lit)
     {new_lit_id, map}
   end
@@ -68,7 +68,7 @@ defmodule LiveData.Tracked.FlatAst.Util.Transcribe do
           {{pattern, binds}, map}
 
         :literal, _selector, literal, map ->
-          {:literal, lit} = FlatAst.get(data.ast, literal)
+          {:literal_value, lit} = FlatAst.get(data.ast, literal)
           new_lit_id = PDAst.add_literal(out, lit)
           {new_lit_id, map}
 
@@ -96,7 +96,7 @@ defmodule LiveData.Tracked.FlatAst.Util.Transcribe do
       {:expr_bind, _eid, _selector} = bind ->
         transcribe_bind(bind, map, backup_resolve)
 
-      {:literal, lit} ->
+      {:literal_value, lit} ->
         PDAst.add_literal(out, lit)
 
       _ ->

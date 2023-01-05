@@ -24,9 +24,9 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
       {:ok, static_result} = StaticsAgent.fetch(state, expr_id)
 
       case {static_structure, static_result} do
-        {%Slot{num: 0}, {:unfinished, _nid, [slot_zero_expr], nil}} ->
+        {%Slot{num: 0}, %{state: :unfinished, slots: [slot_zero_expr], key: nil}} ->
           case StaticsAgent.fetch(state, slot_zero_expr) do
-            {:ok, {:finished, _static, _slots, _key} = val} ->
+            {:ok, %{state: :finished} = val} ->
               :ok = StaticsAgent.set(state, expr_id, val)
 
             _ ->
@@ -76,6 +76,11 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
     StaticsAgent.add_slot(state, static_id, expr_id)
   end
 
+  def rewrite_make_structure_rec(%Expr.CallTracked{}, expr_id, _ast, static_id, state) do
+    :ok = StaticsAgent.add_dependencies(state, [expr_id])
+    StaticsAgent.add_slot(state, static_id, expr_id)
+  end
+
   def rewrite_make_structure_rec(%Expr.CallMF{module: nil}, expr_id, _ast, static_id, state) do
     :ok = StaticsAgent.add_dependencies(state, [expr_id])
     StaticsAgent.add_slot(state, static_id, expr_id)
@@ -83,7 +88,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
 
   def rewrite_make_structure_rec(%Expr.CallMF{} = expr, expr_id, ast, static_id, state) do
     case {FlatAst.get(ast, expr.module), FlatAst.get(ast, expr.function)} do
-      {{:literal, LiveData.Tracked.Dummy}, {:literal, :keyed_stub}} ->
+      {{:literal_value, LiveData.Tracked.Dummy}, {:literal_value, :keyed_stub}} ->
         [key_expr, value_expr] = expr.args
 
         :ok = StaticsAgent.add_dependencies(state, [key_expr])
@@ -91,20 +96,16 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
 
         rewrite_make_structure_rec(value_expr, ast, static_id, state)
 
-      {{:literal, LiveData.Tracked.Dummy}, {:literal, :track_stub}} ->
-        [call_expr_id] = expr.args
-        _call_expr = %Expr.CallMF{} = FlatAst.get(ast, call_expr_id)
+      {{:literal_value, LiveData.Tracked.Dummy}, {:literal_value, :track_stub}} ->
+        # This case should have been rewritten to `Expr.CallTracked` in a previous pass.
+        raise "unreachable"
 
-        :ok = StaticsAgent.add_dependencies(state, [call_expr_id])
-
-        StaticsAgent.add_slot(state, static_id, call_expr_id)
-
-      {{:literal, LiveData.Tracked.Dummy}, {:literal, :custom_fragment_stub}} ->
+      {{:literal_value, LiveData.Tracked.Dummy}, {:literal_value, :custom_fragment_stub}} ->
         [_custom_fragment_id] = expr.args
         # TODO: Reference the custom fragment
         throw "todo"
 
-      {{:literal, LiveData.Tracked.Dummy}, {:literal, :hook_stub}} ->
+      {{:literal_value, LiveData.Tracked.Dummy}, {:literal_value, :hook_stub}} ->
         [_hook_module, _subtrees] = expr.args
         # TODO: Reference the hook
         throw "todo"
@@ -134,7 +135,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
     {:make_tuple, elems_static}
   end
 
-  def rewrite_make_structure_rec({:literal, lit}, _expr_id, _ast, _static_id, _state) do
+  def rewrite_make_structure_rec({:literal_value, lit}, _expr_id, _ast, _static_id, _state) do
     {:literal, lit}
   end
 

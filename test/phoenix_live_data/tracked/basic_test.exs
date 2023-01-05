@@ -1,20 +1,10 @@
 defmodule LiveData.Tracked.BasicTest do
   use ExUnit.Case
+
   import LiveData.Tracked.TestHelpers
 
-  use LiveData.Tracked
-
-  require LiveData
-
-  def blackbox(value), do: value
-
-  deft foobar() do
-    yay = keyed 1, 1
-    blackbox(yay)
-  end
-
   test "fully static data structure" do
-    {:ok, module} = try_define_module do
+    module = define_module! do
       use LiveData.Tracked
 
       deft fully_static_data_structure do
@@ -49,7 +39,7 @@ defmodule LiveData.Tracked.BasicTest do
   end
 
   test "with atom case" do
-    {:ok, module} = try_define_module do
+    module = define_module! do
       use LiveData.Tracked
 
       deft with_atom_case(assigns) do
@@ -72,7 +62,7 @@ defmodule LiveData.Tracked.BasicTest do
   end
 
   test "basic list comprehension" do
-    {:ok, module} = try_define_module do
+    module = define_module! do
       use LiveData.Tracked
 
       deft with_basic_list_comprehension(assigns) do
@@ -96,7 +86,7 @@ defmodule LiveData.Tracked.BasicTest do
 
 
   test "with binary interpolation" do
-    {:ok, module} = try_define_module do
+    module = define_module! do
       use LiveData.Tracked
 
       deft with_binary_interpolation(assigns) do
@@ -111,5 +101,40 @@ defmodule LiveData.Tracked.BasicTest do
     assigns = %{:a => "foobar"}
     value = module.__tracked__with_binary_interpolation__(assigns)
     #IO.inspect value
+  end
+
+  test "tracked call tracked function" do
+    module = define_module! do
+      use LiveData.Tracked
+
+      deft root(data) do
+        %{
+          child: track(child(data.child))
+        }
+      end
+
+      deft child(data) do
+        %{
+          data: data.data
+        }
+      end
+
+    end
+
+    data = %{child: %{data: 123}}
+    value = module.__tracked__root__(data)
+
+    # Compiler can't reason across functions, this will return two nested statics
+
+    assert value.template == {:make_map, nil, [
+      {{:literal, :child}, %LiveData.Tracked.Tree.Slot{num: 0}}
+    ]}
+    [child_static] = value.slots
+
+    assert child_static.template == {:make_map, nil, [
+      {{:literal, :data}, %LiveData.Tracked.Tree.Slot{num: 0}}
+    ]}
+    assert child_static.slots == [123]
+
   end
 end

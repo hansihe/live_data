@@ -4,11 +4,39 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent do
   during the execution of the MakeStructure subpass.
   """
 
+  alias LiveData.Tracked.TraceCollector
   alias LiveData.Tracked.Tree.Slot
+
+  defstruct [
+    statics: %{},
+    # The traversed set is the set of expressions where, although they
+    # where not rewritten into a static, the compiler knew how to
+    # traverse them.
+    # These are things like `case` or `for` where we cannot know at
+    # compile-time the shape of the data.
+    traversed: MapSet.new(),
+    # The dependencies set is the set of expressions depended on
+    # by any rewritten static.
+    # Added in one of two cases:
+    # * Explicitly depended on by a slot
+    # * Implicitly depended on by a traversed expression
+    dependencies: MapSet.new(),
+  ]
+
+  defmodule Static do
+    defstruct [
+      state: :unfinished,
+      next_slot_id: 0,
+      slots: [],
+      key: nil,
+      # Set when static is finalized.
+      static_structure: nil,
+    ]
+  end
 
   def spawn do
     Agent.start_link(fn ->
-      %{statics: %{}, traversed: MapSet.new(), dependencies: MapSet.new()}
+      %__MODULE__{}
     end)
   end
 
@@ -22,7 +50,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent do
     :ok =
       Agent.update(state, fn state ->
         :error = Map.fetch(state.statics, static_id)
-        put_in(state.statics[static_id], {:unfinished, 0, [], nil})
+        put_in(state.statics[static_id], %Static{})
       end)
   end
 
@@ -30,8 +58,13 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent do
     agent_update_with_return(state, fn state ->
       {slot_id, state} =
         get_and_update_in(state.statics[static_id], fn
-          {:unfinished, next_slot_id, slots, key} ->
-            {next_slot_id, {:unfinished, next_slot_id + 1, [expr_id | slots], key}}
+          %Static{state: :unfinished} = static ->
+            slot_id = static.next_slot_id
+            static = %{ static |
+              next_slot_id: slot_id + 1,
+              slots: [expr_id | static.slots]
+            }
+            {slot_id, static}
         end)
 
       {%Slot{num: slot_id}, state}
@@ -40,22 +73,28 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent do
 
   def set_key(state, static_id, expr_id) do
     Agent.update(state, fn state ->
-      update_in(state.statics[static_id], fn {:unfinished, nid, slots, nil} ->
-        {:unfinished, nid, slots, expr_id}
+      update_in(state.statics[static_id], fn
+        %Static{state: :unfinished} = static ->
+          %{static | key: expr_id}
       end)
     end)
   end
 
   def finalize(state, static_id, static_structure) do
     Agent.update(state, fn state ->
-      update_in(state.statics[static_id], fn {:unfinished, _nid, slots, key} ->
-        slots = Enum.reverse(slots)
-        {:finished, static_structure, slots, key}
+      update_in(state.statics[static_id], fn
+        %Static{state: :unfinished} = static ->
+          slots = Enum.reverse(static.slots)
+          %{ static |
+            state: :finished,
+            slots: slots,
+            static_structure: static_structure
+          }
       end)
     end)
   end
 
-  def set(state, static_id, val) do
+  def set(state, static_id, %Static{} = val) do
     Agent.update(state, fn state ->
       put_in(state.statics[static_id], val)
     end)
@@ -82,14 +121,6 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent do
 
       update_in(state.dependencies, &MapSet.union(&1, MapSet.new(canonical_exprs)))
     end)
-  end
-
-  def io_inspect(state) do
-    :ok =
-      Agent.get(state, fn state ->
-        if LiveData.debug_prints?(), do: IO.inspect(state)
-        :ok
-      end)
   end
 
   defp agent_update_with_return(agent, fun) do

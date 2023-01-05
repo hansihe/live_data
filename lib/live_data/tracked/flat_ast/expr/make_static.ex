@@ -1,4 +1,6 @@
-defmodule LiveData.Tracked.FlatAst.Expr.MakeStatic do
+alias LiveData.Tracked.FlatAst.Expr
+
+defmodule Expr.MakeStatic do
   @moduledoc false
 
   defstruct key: nil, static_id: nil, mfa: nil, slots: [], static: nil
@@ -12,4 +14,19 @@ defmodule LiveData.Tracked.FlatAst.Expr.MakeStatic do
       static: static
     }
   end
+end
+
+defimpl Expr, for: Expr.MakeStatic do
+
+  def transform(%Expr.MakeStatic{} = expr, acc, fun) do
+    {new_slots, acc} =
+      expr.slots
+      |> Enum.with_index()
+      |> Enum.map_reduce(acc, fn {elem, idx}, acc ->
+        fun.(:value, idx, elem, acc)
+      end)
+    new_expr = %{expr | slots: new_slots}
+    {new_expr, acc}
+  end
+
 end

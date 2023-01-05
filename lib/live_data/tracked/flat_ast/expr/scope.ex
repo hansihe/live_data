@@ -1,3 +1,5 @@
+alias LiveData.Tracked.FlatAst.Expr
+
 defmodule LiveData.Tracked.FlatAst.Expr.Scope do
   @moduledoc """
   In many ways similar to `Expr.Block`, but with different semantics in codegen.
@@ -19,4 +21,22 @@ defmodule LiveData.Tracked.FlatAst.Expr.Scope do
       location: location
     }
   end
+end
+
+defimpl Expr, for: Expr.Scope do
+
+  def transform(%Expr.Scope{exprs: exprs} = expr, acc, fun) do
+    num_items = Enum.count(exprs)
+
+    {new_exprs, acc} =
+      exprs
+      |> Enum.with_index()
+      |> Enum.map_reduce(acc, fn {expr, idx}, acc ->
+        fun.(:value, {idx, idx == num_items - 1}, expr, acc)
+      end)
+
+    new_expr = %{expr | exprs: new_exprs}
+    {new_expr, acc}
+  end
+
 end

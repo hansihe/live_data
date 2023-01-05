@@ -1,4 +1,6 @@
-defmodule LiveData.Tracked.FlatAst.Expr.MakeTuple do
+alias LiveData.Tracked.FlatAst.Expr
+
+defmodule Expr.MakeTuple do
   @moduledoc false
 
   defstruct elements: [], location: nil
@@ -9,4 +11,20 @@ defmodule LiveData.Tracked.FlatAst.Expr.MakeTuple do
       location: location
     }
   end
+end
+
+defimpl Expr, for: Expr.MakeTuple do
+
+  def transform(%Expr.MakeTuple{} = expr, acc, fun) do
+    {new_elems, acc} =
+      expr.elements
+      |> Enum.with_index()
+      |> Enum.map_reduce(acc, fn {elem, idx}, acc ->
+        fun.(:value, idx, elem, acc)
+      end)
+
+    new_expr = %{ expr | elements: new_elems }
+    {new_expr, acc}
+  end
+
 end
