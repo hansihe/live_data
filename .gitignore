@@ -385,3 +385,5 @@ dist
 /installer/deps
 
 # End of https://www.toptal.com/developers/gitignore/api/elixir,phoenix,node,flutter,dart,intellij
+
+.tool-versions

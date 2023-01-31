@@ -100,7 +100,14 @@ defmodule LiveData.Tracked.BasicTest do
 
     assigns = %{:a => "foobar"}
     value = module.__tracked__with_binary_interpolation__(assigns)
-    #IO.inspect value
+
+    assert value.template == {:make_binary,
+      [
+        {:literal, "abc\n"},
+        %LiveData.Tracked.Tree.Slot{num: 0},
+        {:literal, "\ndef\n"}
+      ]}
+    assert value.slots == ["foobar"]
   end
 
   test "tracked call tracked function" do
@@ -135,6 +142,23 @@ defmodule LiveData.Tracked.BasicTest do
       {{:literal, :data}, %LiveData.Tracked.Tree.Slot{num: 0}}
     ]}
     assert child_static.slots == [123]
-
   end
+
+  test "key in non return position" do
+    {:error, _module, _trace, error, _stacktrace} = try_define_module do
+      use LiveData.Tracked
+
+      def blackbox(val), do: val
+
+      deft testing(data) do
+        {:foo, blackbox(keyed(data.key, data.val))}
+      end
+    end
+
+    assert match?(
+      %CompileError{description: "deft error: `keyed` used in non-return position"},
+      error
+    )
+  end
+
 end

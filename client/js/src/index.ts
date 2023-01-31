@@ -100,7 +100,8 @@ export class LiveData {
         this.encoding = new JSONEncoding();
 
         let topic = "dv:c:" + this.socket.nextDvCounter();
-        this.channel = this.socket.socket.channel(topic, {"r": [route, initialParams]});
+        // TODO params
+        this.channel = this.socket.socket.channel(topic, {"r": route});
 
         this.channel.onError(() => {});
         this.channel.onClose(() => {});

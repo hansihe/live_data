@@ -134,4 +134,62 @@ defmodule LiveData.Tracked.Encoding.JSON do
     {lit, state}
   end
 
+  #def read(ops) do
+  #  Enum.map(ops, fn
+  #    [@op_render, frag_id] ->
+  #      {:render, frag_id}
+
+  #    [@op_set_fragment, frag_id, escaped] ->
+  #      unescaped = unescape_fragment(escaped)
+  #      {:set_fragment, frag_id, unescaped}
+
+  #    [@op_set_fragment_root_template, frag_id, template_id | slots] ->
+  #      escaped = ["$t", template_id | slots]
+  #      unescaped = unescape_fragment(escaped)
+  #      {:set_fragment, frag_id, unescaped}
+
+  #    [@op_patch_fragment, frag_id, escaped] ->
+  #      unescaped = unescape_fragment(escaped)
+  #      {:patch_fragment, frag_id, unescaped}
+
+  #    [@op_set_template, temp_id, escaped] ->
+  #      unescaped = unescape_template(escaped)
+  #      {:set_template, temp_id, unescaped}
+  #  end)
+  #end
+
+  #def unescape_fragment(["$t", id | slots]) do
+  #  IO.inspect slots, label: :slots
+  #  %Tree.Template{
+  #    id: id,
+  #    slots: Enum.map(slots, &unescape_fragment/1)
+  #  }
+  #end
+  #def unescape_fragment(["$r", id]) do
+  #  %Tree.Ref{id: id}
+  #end
+  ## TODO remove when complete
+  #def unescape_fragment(num) when is_number(num) do
+  #  num
+  #end
+  #def unescape_fragment(atom) when is_atom(atom) do
+  #  atom
+  #end
+
+  #def unescape_template(["$s", slot_num]) do
+  #  %Tree.Slot{num: slot_num}
+  #end
+  #def unescape_template(map) when is_map(map) do
+  #  kvs = Enum.map(map, fn {key, value} ->
+  #    [unescape_template(key), unescape_template(value)]
+  #  end)
+  #  {:make_map, nil, kvs}
+  #end
+  #def unescape_template([]) do
+  #  {:literal, []}
+  #end
+  #def unescape_template(val) when is_atom(val) do
+  #  {:literal, val}
+  #end
+
 end

@@ -2,14 +2,12 @@ defmodule LiveData.Tracked.TreeTest do
   use ExUnit.Case
   import LiveData.Tracked.TestHelpers
 
-  alias LiveData.Tracked.Render
   alias LiveData.Tracked.Apply
-  alias LiveData.Tracked.Diff
   alias LiveData.Tracked.Tree
   alias LiveData.Tracked.Encoding
 
   def make_module() do
-    {:ok, module} = try_define_module do
+    module = define_module! do
       use LiveData.Tracked
 
       deft render(assigns) do
@@ -167,13 +165,10 @@ defmodule LiveData.Tracked.TreeTest do
   #  }
   # end
 
-  @tag :skip
   test "foobar" do
     module = make_module()
 
-    state = %{ids: %{}, visited: %{}, counter: 0}
-    #%{ids: keyed_ids} = __tracked_ids_render_1__(state)
-    statics = module.__tracked_meta__render__1__(:statics)
+    #statics = module.__tracked_meta__render__1__(:statics)
 
     assigns = %{
       categories: [
@@ -263,13 +258,35 @@ defmodule LiveData.Tracked.TreeTest do
     rendered = module.__tracked__render__(assigns)
     {ops1, tree_state} = Tree.render(rendered, tree_state)
 
-    IO.inspect(ops1)
+    #IO.inspect(ops1)
 
-    {json_ops, encoder} = Encoding.JSON.format(ops1, encoder)
-    IO.inspect json_ops
+    {_json_ops, _encoder} = Encoding.JSON.format(ops1, encoder)
+    #IO.inspect json_ops
 
     apply_state = Apply.apply(ops1, apply_state)
-    IO.inspect(apply_state.rendered)
+    assert apply_state.rendered == %{
+      categories: [
+        %{
+          posts: [
+            %{content: "hoo", postcode: 1123, title: "woo"},
+            %{content: "foobar", postcode: 5321, title: "hello_world"},
+            %{content: "ahjsdiuhasuyidh", postcode: 5321, title: "asdsadasd"},
+            %{content: "kasdtyucqapqlkdsah", postcode: 5321, title: "lsasdgvcx"},
+            %{content: "casdsoapoads", postcode: 5321, title: "klcbnbwbre"}
+          ]
+        },
+        %{
+          posts: [
+            %{content: "dsaiuyasdf", postcode: 5321, title: "uifsaydufih"},
+            %{content: "kduyasd", postcode: 5321, title: "asdlkw"},
+            %{content: "lksdfsafg", postcode: 5321, title: "lkajdeb"},
+            %{content: "wlejakyhdi", postcode: 5321, title: "kjankwne"},
+            %{content: "ae;akjwoieoiu", postcode: 5321, title: "aenwbehh"},
+            %{content: "aehjerwbhg", postcode: 5321, title: "alkwewjhbeah"}
+          ]
+        }
+      ]
+    }
 
     assigns = %{
       categories: [
@@ -312,14 +329,26 @@ defmodule LiveData.Tracked.TreeTest do
     }
 
     rendered = module.__tracked__render__(assigns)
-    {ops2, tree_state} = Tree.render(rendered, tree_state)
+    {ops2, _tree_state} = Tree.render(rendered, tree_state)
 
-    IO.inspect(ops2)
+    #IO.inspect(ops2)
 
-    {json_ops, encoder} = Encoding.JSON.format(ops2, encoder)
-    IO.inspect json_ops
+    {_json_ops, _encoder} = Encoding.JSON.format(ops2, encoder)
+    #IO.inspect json_ops
 
     apply_state = Apply.apply(ops2, apply_state)
-    IO.inspect(apply_state.rendered)
+    assert apply_state.rendered == %{
+      categories: [
+        %{
+          posts: [
+            %{content: "hoo", postcode: 1234, title: "woo"},
+            %{content: "hoo", postcode: 1234, title: "woo"},
+            %{content: "hoo", postcode: 1234, title: "woo"},
+            %{content: "hoo", postcode: 1234, title: "woo"},
+            %{content: "foo", postcode: 1234, title: "foobar"}
+          ]
+        }
+      ]
+    }
   end
 end

@@ -4,7 +4,6 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent do
   during the execution of the MakeStructure subpass.
   """
 
-  alias LiveData.Tracked.TraceCollector
   alias LiveData.Tracked.Tree.Slot
 
   defstruct [
