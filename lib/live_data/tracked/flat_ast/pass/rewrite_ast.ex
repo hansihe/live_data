@@ -65,7 +65,17 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst do
         transcribed = %{ast.root => new_root}
         {new_body, _transcribed} = __MODULE__.RewriteScope.rewrite_scope(clause.body, data, rewritten, transcribed, out)
 
-        clause = %{clause | guard: new_guard, body: new_body}
+        old_root = ast.root
+        new_binds =
+          clause.binds
+          |> Enum.map(fn bind ->
+            data = FlatAst.get_bind_data(ast, bind)
+            ^old_root = data.expr
+            PDAst.add_bind(out, new_root, data.selector, data.variable)
+          end)
+          |> MapSet.new()
+
+        clause = %{clause | guard: new_guard, body: new_body, binds: new_binds}
         {clause, Map.merge(statics_acc, statics)}
       end)
 

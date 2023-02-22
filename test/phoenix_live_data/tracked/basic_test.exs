@@ -3,6 +3,13 @@ defmodule LiveData.Tracked.BasicTest do
 
   import LiveData.Tracked.TestHelpers
 
+  test "woo" do
+    path = :code.which(TmpTest)
+    {:ok, {_, [{:abstract_code, {_, ac}}]}} = :beam_lib.chunks(path, [:abstract_code])
+    IO.puts(:erl_prettypr.format(:erl_syntax.form_list(ac)))
+    true = false
+  end
+
   test "fully static data structure" do
     module = define_module! do
       use LiveData.Tracked
@@ -62,7 +69,7 @@ defmodule LiveData.Tracked.BasicTest do
   end
 
   test "basic list comprehension" do
-    module = define_module! do
+    module = define_module! print_trace: true do
       use LiveData.Tracked
 
       deft with_basic_list_comprehension(assigns) do

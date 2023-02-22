@@ -48,6 +48,12 @@ defmodule LiveData.Tracked.FlatAst.PDAst do
     end)
   end
 
+  def add_bind(ref, to, selector, var) do
+    update(ref, fn ast ->
+      FlatAst.add_bind(ast, to, selector, var)
+    end)
+  end
+
   def add_pattern(ref, pattern) do
     update(ref, fn ast ->
       {id, ast} = FlatAst.add_pattern(ast, pattern)

@@ -64,12 +64,10 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
 
       {:ok, %{state: :finished, static_structure: static, slots: slots, key: key}} ->
         new_slots = Enum.map(slots, fn
-          {:expr_bind, eid, selector} ->
-            expr_id = {:expr, eid}
-            #if LiveData.debug_prints?(), do: IO.inspect({rewritten, transcribed})
-            TraceCollector.log(:rewritten_transcribed, {rewritten, transcribed})
-            {:expr, new_eid} = Map.get(rewritten, expr_id) || Map.fetch!(transcribed, expr_id)
-            {:expr_bind, new_eid, selector}
+          {:bind, _bid} = bind ->
+            data = FlatAst.get_bind_data(data.ast, bind)
+            new_expr = Map.get(rewritten, data.expr) || Map.fetch!(transcribed, data.expr)
+            PDAst.add_bind(out, new_expr, data.selector, data.variable)
 
           {:expr, _eid} = expr_id ->
             Map.get(rewritten, expr_id) || Map.fetch!(transcribed, expr_id)
@@ -118,6 +116,14 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
             new_inner = rewrite_resolve(inner, data, rewritten, transcribed, out)
             {new_inner, rewritten}
 
+          {_, :bind, _} ->
+            new_inner = rewrite_resolve(inner, data, rewritten, transcribed, out)
+            {new_inner, rewritten}
+
+          {_, :bind_ref, _} ->
+            new_inner = rewrite_resolve(inner, data, rewritten, transcribed, out)
+            {new_inner, rewritten}
+
           {_, :pattern, _} ->
             {inner, rewritten}
         end
@@ -129,10 +135,10 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
     {new_expr_id, rewritten}
   end
 
-  def rewrite_resolve({:expr_bind, eid, selector}, _data, rewritten, transcribed, _out) do
-    expr_id = {:expr, eid}
-    {:expr, new_eid} = Map.get(rewritten, expr_id) || Map.fetch!(transcribed, expr_id)
-    {:expr_bind, new_eid, selector}
+  def rewrite_resolve({:bind, _bid} = bind, data, rewritten, transcribed, out) do
+    data = FlatAst.get_bind_data(data.ast, bind)
+    new_expr = {:expr, _new_eid} = Map.get(rewritten, data.expr) || Map.fetch!(transcribed, data.expr)
+    PDAst.add_bind(out, new_expr, data.selector, data.variable)
   end
 
   def rewrite_resolve({:expr, _eid} = expr_id, _data, rewritten, transcribed, _out) do
@@ -144,10 +150,16 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
     PDAst.add_literal(out, literal)
   end
 
-  def rewrite_scope_resolve({:expr_bind, eid, selector}, _data, rewritten, _transcribed, _out) do
+  def rewrite_scope_resolve({:bind, _bid} = bind, data, rewritten, transcribed, out) do
+    data = FlatAst.get_bind_data(data.ast, bind)
+    new_expr = {:expr, _new_eid} = Map.get(rewritten, data.expr) || Map.fetch!(transcribed, data.expr)
+    PDAst.add_bind(out, new_expr, data.selector, data.variable)
+  end
+
+  def rewrite_scope_resolve({:expr_bind, eid, selector, var}, _data, rewritten, _transcribed, _out) do
     expr_id = {:expr, eid}
     {:expr, new_eid} = Map.fetch!(rewritten, expr_id)
-    {:expr_bind, new_eid, selector}
+    {:expr_bind, new_eid, selector, var}
   end
 
   def rewrite_scope_resolve({:literal, _lit_id} = literal_id, data, _rewritten, _transcribed, out) do

@@ -72,14 +72,13 @@ defmodule LiveData.Tracked.FlatAst.Util.Transcribe do
           new_lit_id = PDAst.add_literal(out, lit)
           {new_lit_id, map}
 
-        :ref, _selector, {:expr_bind, eid, bind_selector}, map ->
-          {:expr, new_eid} = Map.get(map, {:expr, eid}) || backup_resolve.({:expr, eid})
-          new_ref = {:expr_bind, new_eid, bind_selector}
-
+        :bind, _selector, {:bind, _bid} = bind, map ->
+          new_ref = transcribe_bind(bind, map, backup_resolve, data, out)
           {new_ref, map}
 
-        :ref, _selector, ref_expr, map ->
-          {Map.fetch!(map, ref_expr), map}
+        :bind_ref, _selector, {:bind, _bid} = bind, map ->
+          new_ref = transcribe_bind(bind, map, backup_resolve, data, out)
+          {new_ref, map}
       end)
 
     :ok = PDAst.set_expr(out, new_expr_id, new_expr)
@@ -93,8 +92,8 @@ defmodule LiveData.Tracked.FlatAst.Util.Transcribe do
         {new_expr_id, _map} = transcribe(expr_id, data, map, backup_resolve, out)
         new_expr_id
 
-      {:expr_bind, _eid, _selector} = bind ->
-        transcribe_bind(bind, map, backup_resolve)
+      {:bind, _bid} = bind ->
+        transcribe_bind(bind, map, backup_resolve, data, out)
 
       {:literal_value, lit} ->
         PDAst.add_literal(out, lit)
@@ -104,9 +103,9 @@ defmodule LiveData.Tracked.FlatAst.Util.Transcribe do
     end
   end
 
-  def transcribe_bind({:expr_bind, eid, selector}, map, backup_resolve) do
-    expr_id = {:expr, eid}
-    {:expr, new_eid} = Map.get(map, expr_id) || backup_resolve.(expr_id)
-    {:expr_bind, new_eid, selector}
+  def transcribe_bind({:bind, _bid} = bind, map, backup_resolve, data, out) do
+    data = FlatAst.get_bind_data(data.ast, bind)
+    new_expr_id = Map.get(map, data.expr) || backup_resolve.(data.expr)
+    PDAst.add_bind(out, new_expr_id, data.selector, data.variable)
   end
 end

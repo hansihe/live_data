@@ -5,9 +5,10 @@ defmodule Expr.For do
   Corresponds to `for` list comprehension in the Elixir AST. Represented as `{:for, _, specifiers}`.
 
   NOTE: `uniq` and `reduce` are currently not implemented, they are TODOs.
+  NOTE: Bitstring generators are TODOs.
   """
 
-  defstruct items: nil, into: nil, inner: nil, location: nil
+  defstruct items: nil, into: nil, uniq: false, reduce: nil, reduce_pat: nil, inner: nil, location: nil
 
   def new(items, into, inner, location \\ nil) do
     %__MODULE__{
@@ -27,9 +28,22 @@ defimpl Expr, for: Expr.For do
       |> Enum.with_index()
       |> Enum.map_reduce(acc, fn
         {{:loop, pattern, binds, body}, idx}, acc ->
-          {{new_pattern, new_binds}, acc} = fun.(:pattern, {idx, :pattern}, {pattern, binds}, acc)
+          {new_pattern, acc} = fun.(:pattern, {idx, :pattern}, pattern, acc)
+          {new_binds, acc} = Enum.reduce(binds, {[], acc}, fn bind, {list, acc} ->
+            {new, acc} = fun.(:bind, {idx, :pattern}, bind, acc)
+            {[new | list], acc}
+          end)
           {new_body, acc} = fun.(:scope, {idx, :generator}, body, acc)
-          {{:loop, new_pattern, new_binds, new_body}, acc}
+          {{:loop, new_pattern, MapSet.new(new_binds), new_body}, acc}
+
+        {{:bitstring_loop, pattern, binds, body}, idx}, acc ->
+          {new_pattern, acc} = fun.(:pattern, {idx, :pattern}, pattern, acc)
+          {new_binds, acc} = Enum.reduce(binds, {[], acc}, fn bind, {list, acc} ->
+            {new, acc} = fun.(:bind, {idx, :pattern}, bind, acc)
+            {[new | list], acc}
+          end)
+          {new_body, acc} = fun.(:scope, {idx, :generator}, body, acc)
+          {{:bitstring_loop, new_pattern, MapSet.new(new_binds), new_body}, acc}
 
         {{:filter, body}, idx}, acc ->
           {new_body, acc} = fun.(:scope, {idx, :filter}, body, acc)

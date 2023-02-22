@@ -39,17 +39,8 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
       |> Enum.reduce(fun, fn {{opts, args, guard, body}, clause_idx}, fun ->
         location = make_location(opts)
 
-        {pat_var_map, patterns} = handle_patterns(args, scope, out)
-
-        scope =
-          Enum.reduce(pat_var_map, scope, fn {idx, var}, scope ->
-            {:expr, eid} = expr_id
-            sub_expr_id = {:expr_bind, eid, {clause_idx, idx}}
-
-            :ok = PDAst.add_variable(out, var, sub_expr_id)
-
-            Map.put(scope, var, sub_expr_id)
-          end)
+        {binds_set, patterns, scope} = handle_patterns_scope(
+            args, expr_id, clause_idx, scope, out)
 
         guard_expr =
           case guard do
@@ -58,7 +49,7 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
 
         {body_expr, _scope} = from_expr(body, scope, out)
 
-        Expr.Fn.add_clause(fun, patterns, pat_var_map, guard_expr, body_expr, location)
+        Expr.Fn.add_clause(fun, patterns, binds_set, guard_expr, body_expr, location)
       end)
 
     fun = Expr.Fn.finish(fun)
@@ -133,21 +124,12 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
 
     {rhs_expr, scope} = from_expr(rhs, scope, out)
 
-    {binds_map, [pat]} = handle_patterns([lhs], scope, out)
-
-    scope =
-      Enum.reduce(binds_map, scope, fn {idx, var}, scope ->
-        {:expr, eid} = expr_id
-        bind_id = {:expr_bind, eid, idx}
-
-        :ok = PDAst.add_variable(out, var, bind_id)
-
-        Map.put(scope, var, bind_id)
-      end)
+    {binds_set, [pat], scope} = handle_patterns_scope(
+        [lhs], expr_id, nil, scope, out)
 
     location = make_location(opts)
     :ok = PDAst.set_expr(out, expr_id, Expr.Match.new(
-          pat, binds_map, rhs_expr, location))
+          pat, binds_set, rhs_expr, location))
 
     {expr_id, scope}
   end
@@ -180,21 +162,12 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
           ^args_count = Enum.count(args)
           location = make_location(clause_opts)
 
-          {pat_var_map, patterns} = handle_patterns(args, scope, out)
-
-          scope =
-            Enum.reduce(pat_var_map, scope, fn {idx, var}, scope ->
-              {:expr, eid} = expr_id
-              sub_expr_id = {:expr_bind, eid, {clause_idx, idx}}
-
-              :ok = PDAst.add_variable(out, var, sub_expr_id)
-
-              Map.put(scope, var, sub_expr_id)
-            end)
+          {binds_set, patterns, scope} = handle_patterns_scope(
+              args, expr_id, clause_idx, scope, out)
 
           {body_expr, _scope} = from_expr(body, scope, out)
 
-          Expr.Fn.add_clause(fun, patterns, pat_var_map, nil, body_expr, location)
+          Expr.Fn.add_clause(fun, patterns, binds_set, nil, body_expr, location)
       end)
 
     fun = Expr.Fn.finish(fun)
@@ -237,21 +210,15 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     {item_exprs, scope} =
       Enum.map_reduce(Enum.with_index(loop_items), scope, fn
         {{:<-, _opts, [pattern, expr]}, item_idx}, scope ->
-          {binds_map, [pat]} = handle_patterns([pattern], scope, out)
-
-          scope =
-            Enum.reduce(binds_map, scope, fn {idx, var}, scope ->
-              {:expr, eid} = expr_id
-              bind_id = {:expr_bind, eid, {item_idx, idx}}
-
-              :ok = PDAst.add_variable(out, var, bind_id)
-
-              Map.put(scope, var, bind_id)
-            end)
+          {binds_set, [pat], scope} = handle_patterns_scope(
+              [pattern], expr_id, item_idx, scope, out)
 
           {expr_id, scope} = from_expr(expr, scope, out)
 
-          {{:loop, pat, binds_map, expr_id}, scope}
+          {{:loop, pat, binds_set, expr_id}, scope}
+
+        {{:<<>>, _opts, _inner}, _item_idx}, _scope ->
+          throw "binary generators unimplemented"
 
         filter, scope ->
           {expr_id, scope} = from_expr(filter, scope, out)
@@ -281,21 +248,12 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
         {{:->, clause_opts, [[pattern], body]}, clause_idx}, case_expr ->
           location = make_location(clause_opts)
 
-          {pat_var_map, [pattern]} = handle_patterns([pattern], scope, out)
-
-          scope =
-            Enum.reduce(pat_var_map, scope, fn {idx, var}, scope ->
-              {:expr, eid} = expr_id
-              sub_expr_id = {:expr_bind, eid, {clause_idx, idx}}
-
-              :ok = PDAst.add_variable(out, var, sub_expr_id)
-
-              Map.put(scope, var, sub_expr_id)
-            end)
+          {binds_set, [pattern], scope} = handle_patterns_scope(
+              [pattern], expr_id, clause_idx, scope, out)
 
           {body_expr, _scope} = from_expr(body, scope, out)
 
-          Expr.Case.add_clause(case_expr, pattern, pat_var_map, nil, body_expr, location)
+          Expr.Case.add_clause(case_expr, pattern, binds_set, nil, body_expr, location)
       end)
 
     case_expr = Expr.Case.finish(case_expr)
@@ -449,20 +407,23 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     args_pats = Enum.map(patterns, &from_pattern(&1, [], scope, out))
     patterns = Enum.map(args_pats, fn {_binds, pat} -> pat end)
 
-    {_idx, pat_var_map} =
+    binds_vars =
       args_pats
       |> Enum.map(fn {binds, _pat} -> binds end)
       |> Enum.concat()
-      |> Enum.reduce({0, %{}}, fn
-        bind, {idx, map} when is_map_key(map, bind) ->
-          {idx, map}
 
-        bind, {idx, map} ->
-          map = Map.put(map, idx, bind)
-          {idx + 1, map}
-      end)
+    {binds_vars, patterns}
+  end
 
-    {pat_var_map, patterns}
+  def handle_patterns_scope(patterns, within_expr_id, selector, scope, out) do
+    {binds_vars, patterns} = handle_patterns(patterns, scope, out)
+
+    {scope, binds_set} = Enum.reduce(binds_vars, {scope, MapSet.new()}, fn var, {scope, binds_set} ->
+      bind = PDAst.add_bind(out, within_expr_id, selector, var)
+      {Map.put(scope, var, bind), MapSet.put(binds_set, bind)}
+    end)
+
+    {binds_set, patterns, scope}
   end
 
   defp process_var({name, opts, ctx}) when is_atom(name) and is_atom(ctx) do

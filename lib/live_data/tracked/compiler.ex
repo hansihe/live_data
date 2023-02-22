@@ -64,6 +64,8 @@ defmodule LiveData.Tracked.Compiler do
     {:ok, new_ast, statics} = FlatAst.Pass.RewriteAst.rewrite(
       ast, full_mfa, nesting_set)
 
+    TraceCollector.log(:final_flat_ast, new_ast)
+
     :ok = FlatAst.Pass.ErrorOnStub.error_on_stub(new_ast, file)
 
     expr = FlatAst.ToAst.to_expr(new_ast, pretty: true)

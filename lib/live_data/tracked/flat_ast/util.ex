@@ -87,12 +87,12 @@ defmodule LiveData.Tracked.FlatAst.Util do
     Expr.transform(expr, acc, fun)
   end
 
-  def transform_expr({:expr_bind, _eid, _selector} = ref_expr, acc, fun) do
-    fun.(:ref, :ref, ref_expr, acc)
+  def transform_expr({:bind, _bid} = bind, acc, fun) do
+    fun.(:bind, nil, bind, acc)
   end
 
   def transform_expr({:literal_value, _lid} = literal_id, acc, fun) do
-    fun.(:literal, :literal, literal_id, acc)
+    fun.(:literal, nil, literal_id, acc)
   end
 
   def reduce_expr(expr, acc, fun) do

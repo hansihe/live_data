@@ -4,6 +4,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent do
   during the execution of the MakeStructure subpass.
   """
 
+  alias LiveData.Tracked.FlatAst
   alias LiveData.Tracked.Tree.Slot
 
   defstruct [
@@ -109,12 +110,12 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent do
     end)
   end
 
-  def add_dependencies(state, exprs) do
+  def add_dependencies(state, ast, exprs) do
     Agent.update(state, fn state ->
       canonical_exprs = Enum.map(exprs, fn
         nil -> nil
         {:expr, _eid} = expr_id -> expr_id
-        {:expr_bind, eid, _selector} -> {:expr, eid}
+        {:bind, _bid} = bind_id -> FlatAst.get_bind_data(ast, bind_id).expr
         {:literal, _lid} = literal_id -> literal_id
       end)
 

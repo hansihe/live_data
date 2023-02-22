@@ -43,7 +43,10 @@ defmodule LiveData.Tracked.FlatAst.Pass.CalculateNesting do
       :literal, _, _, acc ->
         acc
 
-      :ref, _, _, acc ->
+      :bind, _, _, acc ->
+        acc
+
+      :bind_ref, _, _, acc ->
         acc
 
       :pattern, _, _, acc ->

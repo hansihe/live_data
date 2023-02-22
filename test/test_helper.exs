@@ -15,14 +15,14 @@ defmodule LiveData.Tracked.TestHelpers do
 
       if print_trace do
         {:ok, traces} = TraceCollector.get_module_traces(module_name)
-        IO.puts(inspect(traces, limit: :infinity))
+        IO.puts(inspect(traces, pretty: true, limit: :infinity))
       end
 
       out
     rescue
       e ->
         {:ok, traces} = TraceCollector.get_module_traces(module_name)
-        IO.puts(inspect(traces, limit: :infinity))
+        IO.puts(inspect(traces, pretty: true, limit: :infinity))
 
         reraise e, __STACKTRACE__
     end

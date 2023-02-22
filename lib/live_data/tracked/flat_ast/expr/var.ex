@@ -18,8 +18,8 @@ defimpl Expr, for: Expr.Var do
   def transform(%Expr.Var{} = expr, acc, fun) do
     {new_ref_expr, acc} =
       case expr.ref_expr do
-        {:expr_bind, _eid, _selector} = ref_expr ->
-          fun.(:ref, :ref, ref_expr, acc)
+        {:bind, _bid} = bind ->
+          fun.(:bind_ref, nil, bind, acc)
       end
 
     new_expr = %{expr | ref_expr: new_ref_expr}

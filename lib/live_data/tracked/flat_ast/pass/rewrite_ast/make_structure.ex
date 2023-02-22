@@ -51,7 +51,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
   end
 
   def rewrite_make_structure_rec(%Expr.Case{} = expr, expr_id, ast, static_id, state) do
-    :ok = StaticsAgent.add_dependencies(state, [expr.value])
+    :ok = StaticsAgent.add_dependencies(state, ast, [expr.value])
 
     for clause <- expr.clauses do
       _inner_expr = rewrite_make_structure(clause.body, ast, state)
@@ -68,7 +68,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
         {:filter, expr} -> expr
       end)
 
-    :ok = StaticsAgent.add_dependencies(state, [expr.into | items])
+    :ok = StaticsAgent.add_dependencies(state, ast, [expr.into | items])
 
     _inner_expr = rewrite_make_structure(expr.inner, ast, state)
     :ok = StaticsAgent.add_traversed(state, expr_id)
@@ -76,13 +76,13 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
     StaticsAgent.add_slot(state, static_id, expr_id)
   end
 
-  def rewrite_make_structure_rec(%Expr.CallTracked{}, expr_id, _ast, static_id, state) do
-    :ok = StaticsAgent.add_dependencies(state, [expr_id])
+  def rewrite_make_structure_rec(%Expr.CallTracked{}, expr_id, ast, static_id, state) do
+    :ok = StaticsAgent.add_dependencies(state, ast, [expr_id])
     StaticsAgent.add_slot(state, static_id, expr_id)
   end
 
-  def rewrite_make_structure_rec(%Expr.CallMF{module: nil}, expr_id, _ast, static_id, state) do
-    :ok = StaticsAgent.add_dependencies(state, [expr_id])
+  def rewrite_make_structure_rec(%Expr.CallMF{module: nil}, expr_id, ast, static_id, state) do
+    :ok = StaticsAgent.add_dependencies(state, ast, [expr_id])
     StaticsAgent.add_slot(state, static_id, expr_id)
   end
 
@@ -91,7 +91,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
       {{:literal_value, LiveData.Tracked.Dummy}, {:literal_value, :keyed_stub}} ->
         [key_expr, value_expr] = expr.args
 
-        :ok = StaticsAgent.add_dependencies(state, [key_expr])
+        :ok = StaticsAgent.add_dependencies(state, ast, [key_expr])
         :ok = StaticsAgent.set_key(state, static_id, key_expr)
 
         rewrite_make_structure_rec(value_expr, ast, static_id, state)
@@ -111,7 +111,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
         throw "todo"
 
       _ ->
-        :ok = StaticsAgent.add_dependencies(state, [expr_id])
+        :ok = StaticsAgent.add_dependencies(state, ast, [expr_id])
         StaticsAgent.add_slot(state, static_id, expr_id)
     end
   end
@@ -159,13 +159,13 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
       {:make_binary, elems_static}
     else
       # If we have non-:binary specifiers, we fall back to binary in slot.
-      :ok = StaticsAgent.add_dependencies(state, [expr_id])
+      :ok = StaticsAgent.add_dependencies(state, ast, [expr_id])
       StaticsAgent.add_slot(state, static_id, expr_id)
     end
   end
 
-  def rewrite_make_structure_rec(_expr, expr_id, _ast, static_id, state) do
-    :ok = StaticsAgent.add_dependencies(state, [expr_id])
+  def rewrite_make_structure_rec(_expr, expr_id, ast, static_id, state) do
+    :ok = StaticsAgent.add_dependencies(state, ast, [expr_id])
     StaticsAgent.add_slot(state, static_id, expr_id)
   end
 end

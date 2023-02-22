@@ -100,7 +100,10 @@ defmodule LiveData.Tracked.FlatAst.Pass.Normalize do
         :pattern, _selector, pat_id, {acc, ast} ->
           {pat_id, {acc, ast}}
 
-        :ref, _ref, ref_id, {acc, ast} ->
+        :bind_ref, _ref, ref_id, {acc, ast} ->
+          {ref_id, {acc, ast}}
+
+        :bind, _ref, ref_id, {acc, ast} ->
           {ref_id, {acc, ast}}
       end)
 

@@ -33,7 +33,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.ExpandDependencies do
       case {from_child, expr} do
         {_, %Expr.Var{ref_expr: ref_expr}} ->
           visited = MapSet.put(visited, expr_id)
-          item = process_expr_id(ref_expr, expr_id, data)
+          item = process_expr_id(ref_expr, expr_id, data, ast)
           expand_dependencies_inner([item | tail], original, visited, data, ast)
 
         {true, %Expr.Scope{}} ->
@@ -42,7 +42,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.ExpandDependencies do
         {false, %Expr.Scope{exprs: exprs}} ->
           last =
             List.last(exprs)
-            |> process_expr_id(expr_id, data)
+            |> process_expr_id(expr_id, data, ast)
 
           expand_dependencies_inner([last | tail], original, visited, data, ast)
 
@@ -50,7 +50,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.ExpandDependencies do
           children =
             expr
             |> child_exprs_without_traversed()
-            |> Enum.map(&process_expr_id(&1, expr_id, data))
+            |> Enum.map(&process_expr_id(&1, expr_id, data, ast))
 
           expand_dependencies_inner(children ++ tail, original, visited, data, ast)
 
@@ -59,7 +59,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.ExpandDependencies do
 
           children =
             Util.child_exprs(expr)
-            |> Enum.map(&process_expr_id(&1, expr_id, data))
+            |> Enum.map(&process_expr_id(&1, expr_id, data, ast))
 
           expand_dependencies_inner(children ++ tail, original, visited, data, ast)
       end
@@ -84,8 +84,8 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.ExpandDependencies do
     []
   end
 
-  def process_expr_id({:expr_bind, eid, _selector}, {:expr, _eid} = parent, data) do
-    ref_expr_id = {:expr, eid}
+  def process_expr_id({:bind, _bid} = bind, {:expr, _eid} = parent, data, ast) do
+    ref_expr_id = FlatAst.get_bind_data(ast, bind).expr
 
     if MapSet.member?(data.nesting_set, {ref_expr_id, parent}) do
       {true, ref_expr_id}
@@ -94,11 +94,11 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.ExpandDependencies do
     end
   end
 
-  def process_expr_id({:expr, _eid} = expr_id, _parent, _data) do
+  def process_expr_id({:expr, _eid} = expr_id, _parent, _data, _ast) do
     {false, expr_id}
   end
 
-  def process_expr_id({:literal, _lit_id} = expr_id, _parent, _data) do
+  def process_expr_id({:literal, _lit_id} = expr_id, _parent, _data, _ast) do
     {false, expr_id}
   end
 end

@@ -44,8 +44,8 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     to_expr_inner(item, expr_id, gen, ast, true, opts)
   end
 
-  def to_expr_inner({:expr_bind, _eid, _selector} = bind, _expr_id, gen, ast, _scope_mode, _opts) do
-    var = Map.get(ast.variables, bind) || Map.fetch!(gen, bind)
+  def to_expr_inner({:bind, _bid} = bind, _expr_id, gen, _ast, _scope_mode, _opts) do
+    var = Map.fetch!(gen, bind)
     var_ast = var_to_expr(var, gen)
     {var_ast, gen}
   end
@@ -54,23 +54,19 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     {literal, gen}
   end
 
-  def to_expr_inner(%Expr.Fn{} = expr, expr_id, gen, ast, scope_mode, opts) do
+  def to_expr_inner(%Expr.Fn{} = expr, _expr_id, gen, ast, scope_mode, opts) do
     {clauses, gen} =
       expr.clauses
-      |> Enum.with_index()
-      |> Enum.map_reduce(gen, fn {%Expr.Fn.Clause{} = clause, clause_idx}, gen ->
-        {:expr, eid} = expr_id
-
+      |> Enum.map_reduce(gen, fn %Expr.Fn.Clause{} = clause, gen ->
         {patterns_ast, gen} =
           Enum.map_reduce(clause.patterns, gen, fn pattern_id, gen ->
             to_pattern(pattern_id, gen, ast, opts)
           end)
 
-        gen =
-          Enum.reduce(clause.binds, gen, fn {idx, var}, gen ->
-            sub = {:expr_bind, eid, {clause_idx, idx}}
-            Map.put(gen, sub, var)
-          end)
+        gen = Enum.reduce(clause.binds, gen, fn bind, gen ->
+          data = FlatAst.get_bind_data(ast, bind)
+          Map.put(gen, bind, data.variable) # TODO decollide?
+        end)
 
         # TODO handle guards
         nil = clause.guard
@@ -97,6 +93,8 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
 
     unique_var = make_unique_var(opts)
     gen = Map.put(gen, {:expr_bind, eid, 0}, unique_var)
+
+    true = false
 
     {{:=, [], [var_to_expr(unique_var, gen), inner_ast]}, gen}
   end
@@ -131,7 +129,7 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
 
   def to_expr_inner(
         %Expr.Match{pattern: pattern, binds: binds, rhs: rhs, location: location},
-        {:expr, eid},
+        {:expr, _eid} = outer_expr_id,
         gen,
         ast,
         scope_mode,
@@ -141,9 +139,10 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     {rhs_ast, gen} = to_expr(rhs, gen, ast, scope_mode, opts)
 
     gen =
-      Enum.reduce(binds, gen, fn {idx, var}, gen ->
-        sub = {:expr_bind, eid, idx}
-        Map.put(gen, sub, var)
+      Enum.reduce(binds, gen, fn bind, gen ->
+        data = FlatAst.get_bind_data(ast, bind)
+        ^outer_expr_id = data.expr
+        Map.put(gen, bind, data.variable)
       end)
 
     ast_opts = make_opts(location: location)
@@ -187,19 +186,19 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     {{:<<>>, ast_opts, elems}, gen}
   end
 
-  def to_expr_inner(%Expr.Case{} = expr, {:expr, eid}, gen, ast, scope_mode, opts) do
+  def to_expr_inner(%Expr.Case{} = expr, {:expr, _eid} = outer_expr_id, gen, ast, scope_mode, opts) do
     {value_ast, gen} = to_expr(expr.value, gen, ast, scope_mode, opts)
 
     {clauses, gen} =
       expr.clauses
-      |> Enum.with_index()
-      |> Enum.map_reduce(gen, fn {%Expr.Case.Clause{} = clause, clause_idx}, gen ->
+      |> Enum.map_reduce(gen, fn %Expr.Case.Clause{} = clause, gen ->
         {pattern_ast, gen} = to_pattern(clause.pattern, gen, ast, opts)
 
         gen =
-          Enum.reduce(clause.binds, gen, fn {idx, var}, gen ->
-            sub = {:expr_bind, eid, {clause_idx, idx}}
-            Map.put(gen, sub, var)
+          Enum.reduce(clause.binds, gen, fn bind, gen ->
+            data = FlatAst.get_bind_data(ast, bind)
+            ^outer_expr_id = data.expr
+            Map.put(gen, bind, data.variable)
           end)
 
         # TODO handle guards
@@ -215,7 +214,7 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     {{:case, ast_opts, [value_ast, [do: clauses]]}, gen}
   end
 
-  def to_expr_inner(%Expr.For{} = expr, {:expr, eid}, gen, ast, scope_mode, opts) do
+  def to_expr_inner(%Expr.For{} = expr, outer_expr_id, gen, ast, scope_mode, opts) do
     # TODO
     # We currently do not handle into.
     # Just assert that we collect into an empty list.
@@ -227,15 +226,15 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
 
     {items, gen} =
       expr.items
-      |> Enum.with_index()
       |> Enum.map_reduce(gen, fn
-        {{:loop, pattern_id, binds_map, expr_id}, item_idx}, gen ->
+        {:loop, pattern_id, binds_map, expr_id}, gen ->
           {pattern_ast, gen} = to_pattern(pattern_id, gen, ast, opts)
 
           gen =
-            Enum.reduce(binds_map, gen, fn {idx, var}, gen ->
-              sub = {:expr_bind, eid, {item_idx, idx}}
-              Map.put(gen, sub, var)
+            Enum.reduce(binds_map, gen, fn bind, gen ->
+              data = FlatAst.get_bind_data(ast, bind)
+              ^outer_expr_id = data.expr
+              Map.put(gen, bind, data.variable)
             end)
 
           {expr_ast, gen} = to_expr(expr_id, gen, ast, scope_mode, opts)
@@ -259,8 +258,9 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     {{{:., ast_opts, [top_expr, field]}, [no_parens: true], []}, gen}
   end
 
-  def to_expr_inner(%Expr.Var{ref_expr: ref_expr, location: location}, _expr_id, gen, ast, _scope_mode, _opts) do
-    var = Map.get(ast.variables, ref_expr) || Map.fetch!(gen, ref_expr)
+  def to_expr_inner(%Expr.Var{ref_expr: ref_expr, location: location}, _expr_id, gen, _ast, _scope_mode, _opts) do
+    #var = Map.get(ast.variables, ref_expr) || Map.fetch!(gen, ref_expr)
+    var = Map.fetch!(gen, ref_expr)
     ast_opts = make_opts(location: location)
     var_ast = var_to_expr(var, gen, ast_opts)
     {var_ast, gen}
