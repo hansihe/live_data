@@ -64,8 +64,8 @@ defmodule LiveData.Tracked.FlatAst.Util.Transcribe do
           new_expr_id = transcribe_maybe_scope(inner_expr_id, data, map, backup_resolve, out)
           {new_expr_id, map}
 
-        :pattern, _selector, {pattern, binds}, map ->
-          {{pattern, binds}, map}
+        :pattern, _selector, pattern, map ->
+          {pattern, map}
 
         :literal, _selector, literal, map ->
           {:literal_value, lit} = FlatAst.get(data.ast, literal)

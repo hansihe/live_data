@@ -5,12 +5,13 @@ defmodule LiveData.Tracked.FlatAst.Expr.MakeCons do
   Corresponds to list cell construction in the Elixir AST. Represented as `[head | tail]`.
   """
 
-  defstruct head: nil, tail: nil
+  defstruct head: nil, tail: nil, location: nil
 
-  def new(head, tail) do
+  def new(head, tail, location \\ nil) do
     %__MODULE__{
       head: head,
-      tail: tail
+      tail: tail,
+      location: location
     }
   end
 end

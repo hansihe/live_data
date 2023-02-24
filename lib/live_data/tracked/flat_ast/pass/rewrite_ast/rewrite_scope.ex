@@ -150,20 +150,4 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
     PDAst.add_literal(out, literal)
   end
 
-  def rewrite_scope_resolve({:bind, _bid} = bind, data, rewritten, transcribed, out) do
-    data = FlatAst.get_bind_data(data.ast, bind)
-    new_expr = {:expr, _new_eid} = Map.get(rewritten, data.expr) || Map.fetch!(transcribed, data.expr)
-    PDAst.add_bind(out, new_expr, data.selector, data.variable)
-  end
-
-  def rewrite_scope_resolve({:expr_bind, eid, selector, var}, _data, rewritten, _transcribed, _out) do
-    expr_id = {:expr, eid}
-    {:expr, new_eid} = Map.fetch!(rewritten, expr_id)
-    {:expr_bind, new_eid, selector, var}
-  end
-
-  def rewrite_scope_resolve({:literal, _lit_id} = literal_id, data, _rewritten, _transcribed, out) do
-    {:literal_value, literal} = FlatAst.get(data.ast, literal_id)
-    PDAst.add_literal(out, literal)
-  end
 end

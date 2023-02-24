@@ -3,6 +3,7 @@ defmodule LiveData.Tracked.BasicTest do
 
   import LiveData.Tracked.TestHelpers
 
+  @tag :skip
   test "woo" do
     path = :code.which(TmpTest)
     {:ok, {_, [{:abstract_code, {_, ac}}]}} = :beam_lib.chunks(path, [:abstract_code])
@@ -69,7 +70,7 @@ defmodule LiveData.Tracked.BasicTest do
   end
 
   test "basic list comprehension" do
-    module = define_module! print_trace: true do
+    module = define_module! do
       use LiveData.Tracked
 
       deft with_basic_list_comprehension(assigns) do

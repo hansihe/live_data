@@ -290,6 +290,14 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     {{{:., [], [module_ast, function_ast]}, ast_opts, args_ast}, gen}
   end
 
+  def to_expr_inner(%Expr.CallValue{} = expr, _expr_id, gen, ast, scope_mode, opts) do
+    {value_ast, gen} = to_expr(expr.value, gen, ast, scope_mode, opts)
+    {args_ast, gen} = Enum.map_reduce(expr.args, gen, &to_expr(&1, &2, ast, scope_mode, opts))
+
+    ast_opts = make_opts(location: expr.location)
+    {{{:., [], [value_ast]}, ast_opts, args_ast}, gen}
+  end
+
   def to_expr_inner(
         %Expr.MakeStatic{key: nil, slots: [inner], static: %Slot{num: 0}},
         _expr_id,

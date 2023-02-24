@@ -289,12 +289,20 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     {expr_id, scope}
   end
 
+  def from_expr([{:|, opts, [head, tail]}], scope, out) do
+    {head_expr, scope} = from_expr(head, scope, out)
+    {tail_expr, scope} = from_expr(tail, scope, out)
+
+    location = make_location(opts)
+    expr_id = PDAst.add_expr(out, Expr.MakeCons.new(head_expr, tail_expr, location))
+    {expr_id, scope}
+  end
+
   def from_expr([head | tail], scope, out) do
     {head_expr, scope} = from_expr(head, scope, out)
     {tail_expr, scope} = from_expr(tail, scope, out)
 
     expr_id = PDAst.add_expr(out, Expr.MakeCons.new(head_expr, tail_expr))
-
     {expr_id, scope}
   end
 
@@ -354,7 +362,19 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     {expr_id, scope}
   end
 
-  def from_expr(_expr, _scope, _out) do
+  def from_expr({{:., opts2, [fun_expr]}, opts1, args}, scope, out) do
+    {fun_expr, scope} = from_expr(fun_expr, scope, out)
+    {arg_exprs, scope} = Enum.map_reduce(args, scope, &from_expr(&1, &2, out))
+
+    location = make_merge_locations([opts1, opts2])
+    expr_id = PDAst.add_expr(out, Expr.CallValue.new(
+          fun_expr, arg_exprs, location))
+
+    {expr_id, scope}
+  end
+
+  def from_expr(expr, _scope, _out) do
+    IO.inspect(expr)
     raise "unhandled clause"
   end
 

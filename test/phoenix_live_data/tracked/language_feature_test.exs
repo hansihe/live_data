@@ -42,6 +42,36 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
 
   end
 
+  describe "lists" do
+
+    test "in deft" do
+      _module = define_module! do
+        use LiveData.Tracked
+        deft testing(v) do
+          [
+            v.a,
+            v.b,
+            v.c,
+            1
+          ]
+        end
+      end
+    end
+
+    test "in deft with tail" do
+      _module = define_module! do
+        use LiveData.Tracked
+        deft testing(v) do
+          [
+            v.a
+            | v.b
+          ]
+        end
+      end
+    end
+
+  end
+
   describe "matching" do
 
     test "basic assignment matching" do
@@ -81,6 +111,77 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
       assert ret.template == {:make_tuple,
         [{:literal, :bar}, %LiveData.Tracked.Tree.Slot{num: 0}]}
       assert ret.slots == [6]
+    end
+
+  end
+
+  describe "anonymous function" do
+
+    test "in deft" do
+      _module = define_module! do
+        use LiveData.Tracked
+        deft testing(v) do
+          fun = fn i -> i.o end
+          fun.(v)
+        end
+      end
+    end
+
+  end
+
+  describe "list comprehensions" do
+
+    test "in deft" do
+      _module = define_module! do
+        use LiveData.Tracked
+        deft testing(v) do
+          for a <- v.v do
+            {1, a}
+          end
+        end
+      end
+    end
+
+    test "explicitly nested in deft" do
+      module = define_module! do
+        use LiveData.Tracked
+        deft testing(v) do
+          for a <- v.v do
+            for b <- a.v do
+              {1, b}
+            end
+          end
+        end
+      end
+
+      assigns = %{
+        v: [
+          %{v: [5, 6]},
+          %{v: [1, 2]}
+        ]
+      }
+
+      module.__tracked__testing__(assigns)
+    end
+
+    test "implicitly nested in deft" do
+      module = define_module! do
+        use LiveData.Tracked
+        deft testing(v) do
+          for a <- v.v, b <- a.v do
+            {1, b}
+          end
+        end
+      end
+
+      assigns = %{
+        v: [
+          %{v: [5, 6]},
+          %{v: [1, 2]}
+        ]
+      }
+
+      module.__tracked__testing__(assigns)
     end
 
   end

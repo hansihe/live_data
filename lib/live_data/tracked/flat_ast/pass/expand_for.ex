@@ -18,29 +18,29 @@ defmodule LiveData.Tracked.FlatAst.Pass.ExpandFor do
     ast
   end
 
-  def rec([], _gen_counter, acc, inner, ast) do
+  def rec([], acc, inner, ast) do
     FlatAst.add_expr(
       ast,
       Expr.MakeCons.new(inner, acc)
     )
   end
 
-  def rec([{:loop, pattern, binds, body} | items], gen_counter, acc, inner, ast) do
-    max_bind_id = Enum.max(Map.keys(binds))
-
+  def rec([{:loop, pattern, binds, body} | items], acc, inner, ast) do
     {fn_expr_id, ast} = FlatAst.add_expr(ast)
-    {:expr, eid} = fn_expr_id
-    acc_bind_id = {:expr_bind, eid, {0, max_bind_id + 1}}
 
-    acc_variable_name = {:acc, gen_counter, __MODULE__}
-    gen_counter = gen_counter + 1
+    {var_counter, ast} = FlatAst.next_id(ast)
+    acc_variable_name = {:acc, var_counter, __MODULE__}
 
-    new_binds = Map.put(binds, max_bind_id + 1, acc_variable_name)
+    {acc_bind, ast} = FlatAst.add_bind(ast, fn_expr_id, 0, acc_variable_name)
+    {acc_pat, ast} = FlatAst.add_pattern(ast, {:bind, acc_bind})
 
-    ast = FlatAst.add_variable(ast, acc_variable_name, acc_bind_id)
-    {acc_pat, ast} = FlatAst.add_pattern(ast, {:bind, acc_variable_name})
+    {new_binds, ast} = Enum.reduce(binds, {[acc_bind], ast}, fn bind, {new_binds, ast} ->
+      data = FlatAst.get_bind_data(ast, bind)
+      {new_bind, ast} = FlatAst.add_bind(ast, fn_expr_id, 0, data.variable)
+      {[new_bind | new_binds], ast}
+    end)
 
-    {res, ast} = rec(items, gen_counter, acc_bind_id, inner, ast)
+    {res, ast} = rec(items, acc_bind, inner, ast)
 
     {inner_fn, ast} = FlatAst.add_expr(
       ast,
@@ -60,21 +60,21 @@ defmodule LiveData.Tracked.FlatAst.Pass.ExpandFor do
     })
   end
 
-  def rec([{:bitstring_loop, pattern, binds, body} | items], gen_counter, acc, inner, ast) do
+  def rec([{:bitstring_loop, pattern, binds, body} | items], acc, inner, ast) do
     raise "not implemented"
   end
 
-  def rec([{:filter, body} | items], gen_counter, acc, inner, ast) do
-    {res, ast} = rec(items, gen_counter, acc, inner, ast)
+  #def rec([{:filter, body} | items], acc, inner, ast) do
+  #  {res, ast} = rec(items, acc, inner, ast)
 
-    FlatAst.add_expr(
-      ast,
-      Expr.Case.new(body)
-      |> Expr.Case.add_clause(:todo, :todo, nil, res)
-      |> Expr.Case.add_clause(:todo, :todo, nil, acc)
-      |> Expr.Case.finish()
-    )
-  end
+  #  FlatAst.add_expr(
+  #    ast,
+  #    Expr.Case.new(body)
+  #    |> Expr.Case.add_clause(:todo, :todo, nil, res)
+  #    |> Expr.Case.add_clause(:todo, :todo, nil, acc)
+  #    |> Expr.Case.finish()
+  #  )
+  #end
 
   # Map comprehension without uniq
   def do_expand_for(e = %Expr.For{uniq: false, reduce: nil, reduce_pat: nil}, expr_id, ast) do
@@ -84,7 +84,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.ExpandFor do
     {empty_list, ast} = FlatAst.add_literal(ast, [])
 
     # Nested reduction.
-    {result, ast} = rec(e.items, 0, empty_list, e.inner, ast)
+    {result, ast} = rec(e.items, empty_list, e.inner, ast)
 
     # Reversal.
     # This replaces the `for` expression.

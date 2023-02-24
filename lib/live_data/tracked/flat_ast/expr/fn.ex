@@ -73,7 +73,12 @@ defimpl Expr, for: Expr.Fn do
       |> Enum.with_index()
       |> Enum.map_reduce(acc, fn
         {%Expr.Fn.Clause{} = clause, idx}, acc ->
-          {{new_patterns, new_binds}, acc} = fun.(:pattern, {idx, :pattern}, {clause.patterns, clause.binds}, acc)
+          {new_patterns, acc} = fun.(:pattern, {idx, :pattern}, clause.patterns, acc)
+
+          {new_binds, acc} = Enum.reduce(clause.binds, {[], acc}, fn bind, {list, acc} ->
+            {new, acc} = fun.(:bind, {idx, :pattern}, bind, acc)
+            {[new | list], acc}
+          end)
 
           {new_guard, acc} =
             if clause.guard do
@@ -84,7 +89,7 @@ defimpl Expr, for: Expr.Fn do
 
           {new_body, acc} = fun.(:scope, {idx, :body}, clause.body, acc)
 
-          {%{clause | patterns: new_patterns, binds: new_binds, guard: new_guard, body: new_body}, acc}
+          {%{clause | patterns: new_patterns, binds: MapSet.new(new_binds), guard: new_guard, body: new_body}, acc}
       end)
 
     new_expr = %{expr | clauses: clauses}
