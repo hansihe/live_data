@@ -3,7 +3,7 @@ defmodule LiveData.Tracked.TreeTest do
   import LiveData.Tracked.TestHelpers
 
   alias LiveData.Tracked.Apply
-  alias LiveData.Tracked.Tree
+  alias LiveData.Tracked.RenderDiff
   alias LiveData.Tracked.Encoding
 
   def make_module() do
@@ -251,12 +251,12 @@ defmodule LiveData.Tracked.TreeTest do
       ]
     }
 
-    tree_state = Tree.new() #keyed_ids)
+    tree_state = RenderDiff.new() #keyed_ids)
     encoder = Encoding.JSON.new()
     apply_state = Apply.new()
 
     rendered = module.__tracked__render__(assigns)
-    {ops1, tree_state} = Tree.render(rendered, tree_state)
+    {ops1, tree_state} = RenderDiff.render(rendered, tree_state)
 
     #IO.inspect(ops1)
 
@@ -329,7 +329,7 @@ defmodule LiveData.Tracked.TreeTest do
     }
 
     rendered = module.__tracked__render__(assigns)
-    {ops2, _tree_state} = Tree.render(rendered, tree_state)
+    {ops2, _tree_state} = RenderDiff.render(rendered, tree_state)
 
     #IO.inspect(ops2)
 

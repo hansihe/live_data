@@ -7,7 +7,7 @@ defmodule LiveData.Tracked.Encoding.JSON do
   @op_set_fragment_root_template 2
   @op_patch_fragment 3
   @op_set_template 4
-  @op_reset 5
+  #@op_reset 5
 
   def new do
     %{

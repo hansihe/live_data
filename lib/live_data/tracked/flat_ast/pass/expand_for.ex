@@ -60,7 +60,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.ExpandFor do
     })
   end
 
-  def rec([{:bitstring_loop, pattern, binds, body} | items], acc, inner, ast) do
+  def rec([{:bitstring_loop, _pattern, _binds, _body} | _items], _acc, _inner, _ast) do
     raise "not implemented"
   end
 

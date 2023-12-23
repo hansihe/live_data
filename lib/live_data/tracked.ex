@@ -87,7 +87,7 @@ defmodule LiveData.Tracked do
 
     wrapped_body =
       quote do
-        import LiveData.Tracked.Dummy, only: [keyed: 2, track: 1, hook: 1, hook: 2, custom_fragment: 1]
+        import LiveData.Tracked.Dummy, only: [keyed: 2, track: 1, lifecycle_hook: 1, lifecycle_hook: 2, custom_fragment: 1]
         unquote(body)
       end
 

@@ -53,9 +53,9 @@ defmodule LiveData.Tracked.Dummy do
     end
   end
 
-  defmacro hook(hook_module, subtrees \\ []) do
+  defmacro lifecycle_hook(hook_module, subtrees \\ []) do
     quote do
-      unquote(__MODULE__).hook_stub(unquote(hook_module), unquote(subtrees))
+      unquote(__MODULE__).lifecycle_hook_stub(unquote(hook_module), unquote(subtrees))
     end
   end
 
@@ -75,7 +75,7 @@ defmodule LiveData.Tracked.Dummy do
   end
 
   @doc false
-  def hook_stub(_hook_module, _subtrees) do
+  def lifecycle_hook_stub(_hook_module, _subtrees) do
     raise "unreachable"
   end
 

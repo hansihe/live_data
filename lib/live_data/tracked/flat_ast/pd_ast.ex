@@ -61,13 +61,6 @@ defmodule LiveData.Tracked.FlatAst.PDAst do
     end)
   end
 
-  def add_variable(ref, variable, expr_id) do
-    update(ref, fn ast ->
-      ast = FlatAst.add_variable(ast, variable, expr_id)
-      {:ok, ast}
-    end)
-  end
-
   def add_literal(ref, literal) do
     update(ref, fn ast ->
       {id, ast} = FlatAst.add_literal(ast, literal)

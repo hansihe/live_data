@@ -2,9 +2,9 @@ defmodule LiveData.Tracked.Encoding.Binary do
   alias LiveData.Tracked.Tree
   alias LiveData.Tracked.Render
 
-  @op_render 0
+  #@op_render 0
   @op_put_fragment 1
-  @op_delete_fragment 2
+  #@op_delete_fragment 2
 
   @expr_substitute_fragment 0
   @expr_render_template 1

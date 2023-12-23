@@ -9,7 +9,7 @@ defmodule LiveData.Channel do
 
   alias Phoenix.Socket.Message
   alias LiveData.Socket
-  alias LiveData.Tracked.Tree
+  alias LiveData.Tracked.RenderDiff
   alias LiveData.Tracked.Encoding
 
   def ping(pid) do
@@ -126,7 +126,7 @@ defmodule LiveData.Channel do
       view: view_module,
       topic: phx_socket.topic,
       serializer: phx_socket.serializer,
-      tracked_state: Tree.new(),
+      tracked_state: RenderDiff.new(),
       encoding_module: encoding_module,
       encoding_state: encoding_module.new()
     }
@@ -143,7 +143,7 @@ defmodule LiveData.Channel do
   defp render_view(%{tracked_state: tracked_state} = state) do
     tree = state.view.__tracked__render__(state.socket.assigns)
 
-    {ops, tracked_state} = Tree.render(tree, tracked_state)
+    {ops, tracked_state} = RenderDiff.render(tree, tracked_state)
     {encoded_ops, encoding_state} = state.encoding_module.format(ops, state.encoding_state)
 
     state = %{state | tracked_state: tracked_state, encoding_state: encoding_state}

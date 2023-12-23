@@ -94,10 +94,6 @@ defmodule LiveData.Tracked.FlatAst do
     {id, ast}
   end
 
-  def gen_variable(ast, name \\ :gen) do
-
-  end
-
   @doc """
   Adds a bint which targets `to` with selector `selector`.
   """

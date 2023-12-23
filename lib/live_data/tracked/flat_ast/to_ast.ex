@@ -82,21 +82,21 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
   end
 
   def to_expr_inner(
-        %Expr.SimpleAssign{inner: inner},
-        {:expr, eid},
-        gen,
-        ast,
-        scope_mode,
-        opts
+        %Expr.SimpleAssign{inner: _inner},
+        {:expr, _eid},
+        _gen,
+        _ast,
+        _scope_mode,
+        _opts
       ) do
-    {inner_ast, gen} = to_expr(inner, gen, ast, scope_mode, opts)
+    #{inner_ast, gen} = to_expr(inner, gen, ast, scope_mode, opts)
 
-    unique_var = make_unique_var(opts)
-    gen = Map.put(gen, {:expr_bind, eid, 0}, unique_var)
+    #unique_var = make_unique_var(opts)
+    #gen = Map.put(gen, {:expr_bind, eid, 0}, unique_var)
 
-    true = false
+    raise "unimpl"
 
-    {{:=, make_opts(), [var_to_expr(unique_var, gen), inner_ast]}, gen}
+    #{{:=, make_opts(), [var_to_expr(unique_var, gen), inner_ast]}, gen}
   end
 
   def to_expr_inner(
