@@ -79,6 +79,11 @@ class JSONEncoding {
       if (body[0] == "\$e") {
         return body[1];
       }
+      if (body[0] == "\$f") {
+        return bodyList.sublist(1)
+          .map((slot) => renderBody(slot, templateSlots))
+          .join('');
+      }
       return body.map((item) => renderBody(item, templateSlots));
     }
     if (body is Map) {

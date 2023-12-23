@@ -42,6 +42,23 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
 
   end
 
+  describe "string construction" do
+    test "in deft" do
+      module = define_module! do
+        use LiveData.Tracked
+        deft testing(v) do
+          "hello #{v}"
+        end
+      end
+
+      value = module.__tracked__testing__("world")
+
+      assert value.template == {:make_binary,
+        [{:literal, "hello "}, %LiveData.Tracked.Tree.Slot{num: 0}]}
+      assert value.slots == ["world"]
+    end
+  end
+
   describe "lists" do
 
     test "in deft" do

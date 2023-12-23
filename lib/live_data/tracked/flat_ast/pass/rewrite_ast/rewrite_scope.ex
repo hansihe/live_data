@@ -6,7 +6,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
   actual rewriting.
   """
 
-  alias LiveData.Tracked.TraceCollector
+  #alias LiveData.Tracked.TraceCollector
   alias LiveData.Tracked.FlatAst
   alias LiveData.Tracked.FlatAst.Expr
   alias LiveData.Tracked.FlatAst.PDAst

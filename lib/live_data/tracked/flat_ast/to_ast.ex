@@ -35,7 +35,7 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
         unique_var = make_unique_var(opts)
         gen = Map.put(gen, expr_id, unique_var)
 
-        {{:=, [], [var_to_expr(unique_var, gen), item_ast]}, gen}
+        {{:=, make_opts(), [var_to_expr(unique_var, gen), item_ast]}, gen}
     end
   end
 
@@ -96,7 +96,7 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
 
     true = false
 
-    {{:=, [], [var_to_expr(unique_var, gen), inner_ast]}, gen}
+    {{:=, make_opts(), [var_to_expr(unique_var, gen), inner_ast]}, gen}
   end
 
   def to_expr_inner(
@@ -122,6 +122,8 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
         opts
       ) do
     {inner, gen} = Enum.map_reduce(exprs, gen, &to_expr(&1, &2, ast, true, opts))
+
+    inner = filter_non_return_literals(inner)
 
     ast_opts = make_opts(location: location)
     {{:__block__, ast_opts, inner}, gen}
@@ -164,7 +166,7 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
   def to_expr_inner(%Expr.MakeCons{head: head, tail: tail}, _expr_id, gen, ast, scope_mode, opts) do
     {head_ast, gen} = to_expr(head, gen, ast, scope_mode, opts)
     {tail_ast, gen} = to_expr(tail, gen, ast, scope_mode, opts)
-    {[{:|, [], [head_ast, tail_ast]}], gen}
+    {[{:|, make_opts(), [head_ast, tail_ast]}], gen}
   end
 
   def to_expr_inner(%Expr.MakeTuple{elements: elems, location: location}, _expr_id, gen, ast, scope_mode, opts) do
@@ -238,7 +240,7 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
             end)
 
           {expr_ast, gen} = to_expr(expr_id, gen, ast, scope_mode, opts)
-          {{:<-, [], [pattern_ast, expr_ast]}, gen}
+          {{:<-, make_opts(), [pattern_ast, expr_ast]}, gen}
 
         {:filter, expr_id}, gen ->
           to_expr(expr_id, gen, ast, scope_mode, opts)
@@ -357,7 +359,7 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
         to_pattern(elem, gen, ast, opts)
     end)
 
-    {{:{}, [], new_elems}, gen}
+    {{:{}, make_opts(), new_elems}, gen}
   end
 
   def to_pattern_inner({:bind, var}, _pattern_id, gen, _ast, _opts) do
@@ -389,11 +391,19 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     end
   end
 
-  def make_opts(args) do
+  def make_opts(args \\ []) do
+    base = [generated: true]
     case Keyword.fetch(args, :location) do
-      {:ok, {line, nil}} -> [line: line]
-      {:ok, {line, column}} -> [line: line, column: column]
-      _ -> []
+      {:ok, {line, nil}} -> [{:line, line} | base]
+      {:ok, {line, column}} -> [{:line, line}, {:column, column} | base]
+      _ -> base
     end
   end
+
+  def filter_non_return_literals(exprs, acc \\ [])
+  def filter_non_return_literals([], []), do: []
+  def filter_non_return_literals([ret_val], acc), do: Enum.reverse([ret_val | acc])
+  def filter_non_return_literals([val | tail], acc) when is_number(val), do: filter_non_return_literals(tail, acc)
+  def filter_non_return_literals([val | tail], acc) when is_binary(val), do: filter_non_return_literals(tail, acc)
+  def filter_non_return_literals([val | tail], acc), do: filter_non_return_literals(tail, [val, acc])
 end

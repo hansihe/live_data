@@ -68,6 +68,11 @@ export default class JSONEncoding {
                 return templateSlots[body[1]];
             } else if (body[0] == "$e") {
                 return body[1];
+            } else if (body[0] == "$f") {
+                return body.slice(1)
+                    .map((slot: any) => this.renderBody(slot, templateSlots))
+                    .join('');
+            }
             } else {
                 return body.map((item: any) => this.renderBody(item, templateSlots));
             }

@@ -3,13 +3,13 @@ defmodule LiveData.Tracked.BasicTest do
 
   import LiveData.Tracked.TestHelpers
 
-  @tag :skip
-  test "woo" do
-    path = :code.which(TmpTest)
-    {:ok, {_, [{:abstract_code, {_, ac}}]}} = :beam_lib.chunks(path, [:abstract_code])
-    IO.puts(:erl_prettypr.format(:erl_syntax.form_list(ac)))
-    true = false
-  end
+  #@tag :skip
+  #test "woo" do
+  #  path = :code.which(TmpTest)
+  #  {:ok, {_, [{:abstract_code, {_, ac}}]}} = :beam_lib.chunks(path, [:abstract_code])
+  #  IO.puts(:erl_prettypr.format(:erl_syntax.form_list(ac)))
+  #  true = false
+  #end
 
   test "fully static data structure" do
     module = define_module! do

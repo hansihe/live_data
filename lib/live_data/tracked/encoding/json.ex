@@ -96,6 +96,7 @@ defmodule LiveData.Tracked.Encoding.JSON do
   def escape_fragment("$r", state), do: {["$e", "$r"], state}
   def escape_fragment("$s", state), do: {["$e", "$s"], state}
   def escape_fragment("$t", state), do: {["$e", "$t"], state}
+  def escape_fragment("$f", state), do: {["$e", "$f"], state}
   def escape_fragment(binary, state) when is_binary(binary), do: {binary, state}
 
   def escape_template(%Tree.Slot{num: slot_num}, state) do
@@ -123,11 +124,19 @@ defmodule LiveData.Tracked.Encoding.JSON do
     end
   end
 
+  def escape_template({:make_binary, elements}, state) do
+    {elements_escaped, state} = Enum.map_reduce(elements, state, &escape_template(&1, &2))
+    {["$f" | elements_escaped], state}
+  end
+
   def escape_template([head | tail], state) do
     {head_esc, state} = escape_template(head, state)
     {tail_esc, state} = escape_template(tail, state)
 
     {[head_esc | tail_esc], state}
+  end
+  def escape_template([], state) do
+    {[], state}
   end
 
   def escape_template({:literal, lit}, state) do

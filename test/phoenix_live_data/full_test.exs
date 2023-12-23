@@ -1,8 +1,8 @@
 defmodule LiveData.FullTest do
   use ExUnit.Case
 
-  import Phoenix.ChannelTest
-  import Phoenix.ConnTest
+  #import Phoenix.ChannelTest
+  #import Phoenix.ConnTest
   import LiveData.Test
 
   #@endpoint LiveData.Test.Endpoint
