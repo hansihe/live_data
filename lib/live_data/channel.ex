@@ -8,7 +8,7 @@ defmodule LiveData.Channel do
   require Logger
 
   alias Phoenix.Socket.Message
-  alias LiveData.Socket
+  alias LiveData.{Socket, Async}
   alias LiveData.Tracked.RenderDiff
   alias LiveData.Tracked.Encoding
 
@@ -49,15 +49,15 @@ defmodule LiveData.Channel do
     mount(params, from, phx_socket)
   end
 
-  #@impl true
-  #def handle_call(msg, _from, socket) do
+  # @impl true
+  # def handle_call(msg, _from, socket) do
   #  IO.inspect(msg)
   #  true = false
-  #end
+  # end
 
-  #def handle_info({:DOWN, ref, _, _, _reason}, ref) do
+  # def handle_info({:DOWN, ref, _, _, _reason}, ref) do
   #  {:stop, {:shutdown, :closed}, ref}
-  #end
+  # end
 
   def handle_info(
         {:DOWN, _ref, _typ, transport_pid, _reason},
@@ -73,6 +73,14 @@ defmodule LiveData.Channel do
     {:noreply, state}
   end
 
+  def handle_info({@prefix, :async_result, {kind, info}}, state) do
+    {ref, _cid, keys, result} = info
+    socket = Async.handle_async(state.socket, nil, kind, keys, ref, result)
+    state = %{state | socket: socket}
+    state = render_view(state)
+    {:noreply, state}
+  end
+
   def handle_info(message, state) do
     {:ok, socket} = state.view.handle_info(message, state.socket)
     state = %{state | socket: socket}
@@ -83,6 +91,7 @@ defmodule LiveData.Channel do
   defp call_handler({module, function}, params) do
     apply(module, function, [params])
   end
+
   defp call_handler(fun, params) when is_function(fun, 1) do
     fun.(params)
   end
@@ -148,7 +157,7 @@ defmodule LiveData.Channel do
 
     state = %{state | tracked_state: tracked_state, encoding_state: encoding_state}
 
-    if LiveData.debug_prints?(), do: IO.inspect encoded_ops
+    if LiveData.debug_prints?(), do: IO.inspect(encoded_ops)
     state = push(state, "o", %{"o" => encoded_ops})
     state
   end
@@ -162,6 +171,11 @@ defmodule LiveData.Channel do
     end
   end
 
+  def report_async_result(monitor_ref, kind, ref, cid, keys, result)
+      when is_reference(monitor_ref) and kind in [:assign, :start] and is_reference(ref) do
+    send(monitor_ref, {@prefix, :async_result, {kind, {ref, cid, keys, result}}})
+  end
+
   defp push(state, event, payload) do
     message = %Message{topic: state.topic, event: event, payload: payload}
     send(state.socket.transport_pid, state.serializer.encode!(message))
@@ -173,7 +187,7 @@ defmodule LiveData.Channel do
       true -> nil
       false -> :code.ensure_loaded(module)
     end
+
     function_exported?(module, function, arity)
   end
-
 end
