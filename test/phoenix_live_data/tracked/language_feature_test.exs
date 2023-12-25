@@ -17,7 +17,7 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
       value = module.__tracked__testing__(%{v: 123})
 
       assert value.template == {:make_map, nil,
-        [{{:literal, :v}, %LiveData.Tracked.Tree.Slot{num: 0}}]}
+        [{{:literal, :v}, %LiveData.Tracked.FragmentTree.Slot{num: 0}}]}
       assert value.slots == [123]
     end
 
@@ -54,7 +54,7 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
       value = module.__tracked__testing__("world")
 
       assert value.template == {:make_binary,
-        [{:literal, "hello "}, %LiveData.Tracked.Tree.Slot{num: 0}]}
+        [{:literal, "hello "}, %LiveData.Tracked.FragmentTree.Slot{num: 0}]}
       assert value.slots == ["world"]
     end
   end
@@ -103,7 +103,7 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
 
       value = module.__tracked__testing__({:ok, :yay})
 
-      assert value.template == {:make_map, nil, [{{:literal, :foo}, %LiveData.Tracked.Tree.Slot{num: 0}}]}
+      assert value.template == {:make_map, nil, [{{:literal, :foo}, %LiveData.Tracked.FragmentTree.Slot{num: 0}}]}
       assert value.slots == [:yay]
     end
 
@@ -121,12 +121,12 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
 
       ret = module.__tracked__testing__({:one, 5})
       assert ret.template == {:make_tuple,
-        [{:literal, :foo}, %LiveData.Tracked.Tree.Slot{num: 0}]}
+        [{:literal, :foo}, %LiveData.Tracked.FragmentTree.Slot{num: 0}]}
       assert ret.slots == [5]
 
       ret = module.__tracked__testing__({:two, 6})
       assert ret.template == {:make_tuple,
-        [{:literal, :bar}, %LiveData.Tracked.Tree.Slot{num: 0}]}
+        [{:literal, :bar}, %LiveData.Tracked.FragmentTree.Slot{num: 0}]}
       assert ret.slots == [6]
     end
 
@@ -201,6 +201,20 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
       module.__tracked__testing__(assigns)
     end
 
+  end
+
+  test "anonymous function with literal return value" do
+    define_module! do
+      use LiveData.Tracked
+
+      def async_result(_fun) do
+        0
+      end
+
+      deft render() do
+        async_result(fn -> "Loading..." end)
+      end
+    end
   end
 
 end

@@ -22,9 +22,7 @@ defmodule Expr.Fn do
     }
   end
 
-  def add_clause(defa, patterns, binds, guard, body, location \\ nil)
-
-  def add_clause(defa, patterns, binds, {:expr, _b} = guard, {:expr, _c} = body, location) do
+  def add_clause(defa, patterns, binds, guard, body, location \\ nil) do
     num_patterns = Enum.count(patterns)
     ^num_patterns = defa.arity
     :ok = Enum.each(patterns, fn {:pattern, _a} -> :ok end)
@@ -33,22 +31,6 @@ defmodule Expr.Fn do
       patterns: patterns,
       binds: binds,
       guard: guard,
-      body: body,
-      location: location
-    }
-
-    %{defa | clauses: [clause | defa.clauses]}
-  end
-
-  def add_clause(defa, patterns, binds, nil, {:expr, _c} = body, location) do
-    num_patterns = Enum.count(patterns)
-    ^num_patterns = defa.arity
-    :ok = Enum.each(patterns, fn {:pattern, _a} -> :ok end)
-
-    clause = %Clause{
-      patterns: patterns,
-      binds: binds,
-      guard: nil,
       body: body,
       location: location
     }
