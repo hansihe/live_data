@@ -86,7 +86,7 @@ defmodule LiveData do
   the list change order, any individual properties change, or other changes.
   """
 
-  alias LiveData.{Socket, Tracked}
+  alias LiveData.{Socket, Tracked, Async, AsyncResult}
 
   @type rendered :: any()
 
@@ -109,8 +109,82 @@ defmodule LiveData do
   end
 
   def assign(%Socket{assigns: assigns} = socket, key, value) do
+    validate_assign_key!(key)
     assigns = Map.put(assigns, key, value)
     %{socket | assigns: assigns}
+  end
+
+  def assign(%Socket{} = socket, keyword_or_map)
+      when is_map(keyword_or_map) or is_list(keyword_or_map) do
+    Enum.reduce(keyword_or_map, socket, fn {key, value}, acc ->
+      assign(acc, key, value)
+    end)
+  end
+
+  def assign_new(%Socket{} = socket, key, fun) when is_function(fun, 1) do
+    validate_assign_key!(key)
+    assigns = assign_new(socket.assigns, key, fun)
+    %Socket{socket | assigns: assigns}
+  end
+
+  def assign_new(%{} = assigns, key, fun) when is_function(fun, 1) do
+    validate_assign_key!(key)
+
+    case assigns do
+      %{^key => _} -> assigns
+      _ -> Map.put_new(assigns, key, fun.(assigns))
+    end
+  end
+
+  @doc """
+  Assigns keys asynchronously.
+
+  The task is linked to the caller and errors are wrapped.
+  Each key passed to `assign_async/3` will be assigned to
+  an `%AsyncResult{}` struct holding the status of the operation
+  and the result when completed.
+
+  ## Examples
+
+      def mount(%{"slug" => slug}, socket) do
+        {:ok,
+         socket
+         |> assign(:foo, "bar")
+         |> assign_async(:org, fn -> {:ok, %{org: fetch_org!(slug)}} end)
+         |> assign_async([:profile, :rank], fn -> {:ok, %{profile: ..., rank: ...}} end)}
+      end
+
+  See the moduledoc for more information.
+  """
+  def assign_async(%Socket{} = socket, key_or_keys, func)
+      when (is_atom(key_or_keys) or is_list(key_or_keys)) and
+             is_function(func, 0) do
+    Async.assign_async(socket, key_or_keys, func)
+  end
+
+  defp validate_assign_key!(key) when is_atom(key), do: :ok
+
+  defp validate_assign_key!(key) do
+    raise ArgumentError, "assigns in LiveData must be atoms, got: #{inspect(key)}"
+  end
+
+  def async_result(%AsyncResult{} = async_assign, clauses) do
+    if !Keyword.keyword?(clauses) or
+         !Enum.all?(clauses, fn {key, _} -> key in [:ok, :loading, :failed] end) do
+      raise ArgumentError,
+            "invalid clauses, expected :ok, :loading, or :failed: #{inspect(clauses)}"
+    end
+
+    cond do
+      async_assign.ok? ->
+        clauses[:ok].(async_assign.result)
+
+      async_assign.loading ->
+        clauses[:loading].()
+
+      !is_nil(async_assign.failed) ->
+        clauses[:failed].(async_assign.result)
+    end
   end
 
   def debug_prints?, do: Application.get_env(:live_data, :deft_compiler_debug_prints, false)
