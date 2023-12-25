@@ -14,6 +14,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.PromoteTracked do
 
     dummy_lit = get_literal_or_nil(ast, LiveData.Tracked.Dummy)
     track_lit = get_literal_or_nil(ast, :track_stub)
+    lifecycle_hook_lit = get_literal_or_nil(ast, :lifecycle_hook_stub)
 
     exprs = ast.exprs
     |> Enum.map(fn
@@ -30,6 +31,19 @@ defmodule LiveData.Tracked.FlatAst.Pass.PromoteTracked do
 
         {expr_id, new_expr}
 
+      {expr_id, %Expr.CallMF{module: ^dummy_lit, function: ^lifecycle_hook_lit, args: [module, subtrees]}} when dummy_lit != nil ->
+        # TODO report errors
+        # TODO validate subtrees argument
+
+        {:literal_value, module_lit} = FlatAst.get(ast, module)
+        true = is_atom(module_lit)
+
+        subtrees_list = collect_static_list(subtrees, ast)
+
+        new_expr = Expr.LifecycleHook.new(module_lit, subtrees_list)
+
+        {expr_id, new_expr}
+
       {expr_id, expr} ->
         {expr_id, expr}
     end)
@@ -37,6 +51,18 @@ defmodule LiveData.Tracked.FlatAst.Pass.PromoteTracked do
 
     ast = %{ast | exprs: exprs}
     {:ok, ast}
+  end
+
+  def collect_static_list(expr, ast, acc \\ []) do
+    case FlatAst.get(ast, expr) do
+      %LiveData.Tracked.FlatAst.Expr.MakeCons{head: head, tail: tail} ->
+        collect_static_list(tail, ast, [head | acc])
+
+      {:literal_value, []} ->
+        Enum.reverse(acc)
+
+      # TODO handle other
+    end
   end
 
 end

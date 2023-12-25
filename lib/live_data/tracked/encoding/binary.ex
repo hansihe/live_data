@@ -1,5 +1,5 @@
 defmodule LiveData.Tracked.Encoding.Binary do
-  alias LiveData.Tracked.Tree
+  alias LiveData.Tracked.FragmentTree
   alias LiveData.Tracked.Render
 
   #@op_render 0
@@ -27,13 +27,13 @@ defmodule LiveData.Tracked.Encoding.Binary do
     [<<@op_put_fragment, id::integer-size(32)>>, body]
   end
 
-  def encode_body(%Tree.Ref{} = ref, state) do
+  def encode_body(%FragmentTree.Ref{} = ref, state) do
     alias_num = Render.get_alias(state.render, ref)
 
     <<@expr_substitute_fragment, alias_num::integer-size(32)>>
   end
 
-  def encode_body(%Tree.Template{id: template_id, slots: slots}, state) do
+  def encode_body(%FragmentTree.Template{id: template_id, slots: slots}, state) do
     num_slots = Enum.count(slots)
 
     encoded_slots = Enum.map(slots, &encode_body(&1, state))

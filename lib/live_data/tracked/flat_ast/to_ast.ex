@@ -5,7 +5,7 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
 
   alias LiveData.Tracked.FlatAst
   alias LiveData.Tracked.FlatAst.Expr
-  alias LiveData.Tracked.Tree.Slot
+  alias LiveData.Tracked.FragmentTree.Slot
 
   def to_expr(ast, opts \\ []) do
     opts = %{

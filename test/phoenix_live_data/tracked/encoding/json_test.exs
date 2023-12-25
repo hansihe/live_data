@@ -2,7 +2,7 @@ defmodule LiveData.Tracked.Encoding.JsonTest do
   use ExUnit.Case
 
   alias LiveData.Tracked.Encoding.JSON
-  alias LiveData.Tracked.Tree.Slot
+  alias LiveData.Tracked.FragmentTree.Slot
 
   describe "escape_template/2" do
 

@@ -11,7 +11,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
   alias LiveData.Tracked.FlatAst.Expr
   alias LiveData.Tracked.FlatAst.PDAst
   alias LiveData.Tracked.FlatAst.Util
-  alias LiveData.Tracked.Tree.Slot
+  alias LiveData.Tracked.FragmentTree.Slot
 
   def rewrite_scope(expr_id, data, rewritten, transcribed, out) do
     %Expr.Scope{exprs: scope_exprs} = FlatAst.get(data.ast, expr_id)

@@ -12,7 +12,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
   alias LiveData.Tracked.FlatAst
   alias LiveData.Tracked.FlatAst.Expr
   alias LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent
-  alias LiveData.Tracked.Tree.Slot
+  alias LiveData.Tracked.FragmentTree.Slot
 
   def rewrite_make_structure(expr_id, ast, state) do
     if StaticsAgent.fetch(state, expr_id) != :error do
@@ -105,7 +105,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
         # TODO: Reference the custom fragment
         throw "todo"
 
-      {{:literal_value, LiveData.Tracked.Dummy}, {:literal_value, :hook_stub}} ->
+      {{:literal_value, LiveData.Tracked.Dummy}, {:literal_value, :lifecycle_hook_stub}} ->
         [_hook_module, _subtrees] = expr.args
         # TODO: Reference the hook
         throw "todo"

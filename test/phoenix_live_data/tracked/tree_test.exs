@@ -1,4 +1,4 @@
-defmodule LiveData.Tracked.TreeTest do
+defmodule LiveData.Tracked.FragmentTreeTest do
   use ExUnit.Case
   import LiveData.Tracked.TestHelpers
 

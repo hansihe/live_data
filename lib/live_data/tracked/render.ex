@@ -2,7 +2,7 @@ defmodule LiveData.Tracked.Render do
   @moduledoc false
 
   alias LiveData.Tracked
-  alias LiveData.Tracked.Tree
+  alias LiveData.Tracked.FragmentTree
   alias LiveData.Tracked.RenderTree
 
   @root_id {{__MODULE__, :internal, 0}, 0}
@@ -24,7 +24,7 @@ defmodule LiveData.Tracked.Render do
     wrapper_tree = add_root_key(tree)
     {:ok, root, state} = traverse(wrapper_tree, state, &render_prepass_mapper/2)
 
-    %Tree.Ref{id: root_id, key: root_key} = root
+    %FragmentTree.Ref{id: root_id, key: root_key} = root
 
     active = %{root => nil}
     active = add_active(state.fragments[root_id].values[root_key].value, active, state)
@@ -104,12 +104,12 @@ defmodule LiveData.Tracked.Render do
     end)
   end
 
-  def add_active_traversal_fn(%Tree.Ref{} = ref, state) do
+  def add_active_traversal_fn(%FragmentTree.Ref{} = ref, state) do
     state = Map.put(state, ref, nil)
     {:ok, nil, state}
   end
 
-  def add_active_traversal_fn(%Tree.Template{} = template, state) do
+  def add_active_traversal_fn(%FragmentTree.Template{} = template, state) do
     state =
       Enum.reduce(template.slots, state, fn slot_tree, state ->
         {:ok, _tree, state} = traverse(slot_tree, state, &add_active_traversal_fn/2)
@@ -171,7 +171,7 @@ defmodule LiveData.Tracked.Render do
         put_in(state.fragments[id].values[keyed.key].generation, state.generation)
       end
 
-    ref = %Tree.Ref{
+    ref = %FragmentTree.Ref{
       id: id,
       key: keyed.key,
     }
@@ -202,7 +202,7 @@ defmodule LiveData.Tracked.Render do
       {value, state}
     end)
 
-    template = %Tree.Template{
+    template = %FragmentTree.Template{
       id: id,
       slots: slots
     }
@@ -246,12 +246,12 @@ defmodule LiveData.Tracked.Render do
   #  out
   #end
 
-  def traverse(%Tree.Ref{} = op, state, mapper) do
+  def traverse(%FragmentTree.Ref{} = op, state, mapper) do
     {:ok, value, state} = mapper.(op, state)
     {:ok, value, state}
   end
 
-  def traverse(%Tree.Template{} = op, state, mapper) do
+  def traverse(%FragmentTree.Template{} = op, state, mapper) do
     {:ok, value, state} = mapper.(op, state)
     {:ok, value, state}
   end
@@ -315,9 +315,9 @@ defmodule LiveData.Tracked.Render do
 
   def is_op?(%RenderTree.Keyed{}), do: true
   def is_op?(%RenderTree.Static{}), do: true
-  def is_op?(%Tree.Ref{}), do: true
-  def is_op?(%Tree.Slot{}), do: true
-  def is_op?(%Tree.Template{}), do: true
+  def is_op?(%FragmentTree.Ref{}), do: true
+  def is_op?(%FragmentTree.Slot{}), do: true
+  def is_op?(%FragmentTree.Template{}), do: true
   def is_op?(_value), do: false
 
   def debug_mode? do

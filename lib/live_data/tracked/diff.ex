@@ -1,7 +1,7 @@
 defmodule LiveData.Tracked.Diff do
   @moduledoc false
 
-  alias LiveData.Tracked.Tree
+  alias LiveData.Tracked.FragmentTree
 
   def new() do
     %{
@@ -45,7 +45,7 @@ defmodule LiveData.Tracked.Diff do
     {[op], state}
   end
 
-  def diff_data(%Tree.Template{} = old, %Tree.Template{} = new) do
+  def diff_data(%FragmentTree.Template{} = old, %FragmentTree.Template{} = new) do
     # TODO diff individual slots
     if old == new do
       :equal

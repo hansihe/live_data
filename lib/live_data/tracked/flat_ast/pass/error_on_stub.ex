@@ -14,6 +14,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.ErrorOnStub do
     dummy_module_lit = get_literal_or_nil(ast, LiveData.Tracked.Dummy)
     keyed_lit = get_literal_or_nil(ast, :keyed_stub)
     tracked_lit = get_literal_or_nil(ast, :tracked_stub)
+    lifecycle_hook_lit = get_literal_or_nil(ast, :lifecycle_hook_stub)
 
     Util.traverse(ast, ast.root, nil, fn
       #_id, %Expr.CallTracked{}
@@ -28,6 +29,9 @@ defmodule LiveData.Tracked.FlatAst.Pass.ErrorOnStub do
           ^tracked_lit ->
             raise "unreachable"
             #"deft error: `tracked` used in non-return position"
+
+          ^lifecycle_hook_lit ->
+            raise "unreachable"
         end
 
         raise %CompileError{

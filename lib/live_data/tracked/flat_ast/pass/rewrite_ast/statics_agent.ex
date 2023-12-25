@@ -5,7 +5,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent do
   """
 
   alias LiveData.Tracked.FlatAst
-  alias LiveData.Tracked.Tree.Slot
+  alias LiveData.Tracked.FragmentTree.Slot
 
   defstruct [
     statics: %{},

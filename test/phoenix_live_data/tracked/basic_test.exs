@@ -58,6 +58,7 @@ defmodule LiveData.Tracked.BasicTest do
       end
     end
 
+
     out = %LiveData.Tracked.RenderTree.Static{} = module.__tracked__with_atom_case__(%{:foo => :bar})
     assert out.slots == []
     assert out.template == {:literal, 1}
@@ -89,7 +90,7 @@ defmodule LiveData.Tracked.BasicTest do
     assert first.slots == [:a]
 
     assert first.template ==
-             {:make_map, nil, [{{:literal, :yay}, %LiveData.Tracked.Tree.Slot{num: 0}}]}
+             {:make_map, nil, [{{:literal, :yay}, %LiveData.Tracked.FragmentTree.Slot{num: 0}}]}
   end
 
 
@@ -112,7 +113,7 @@ defmodule LiveData.Tracked.BasicTest do
     assert value.template == {:make_binary,
       [
         {:literal, "abc\n"},
-        %LiveData.Tracked.Tree.Slot{num: 0},
+        %LiveData.Tracked.FragmentTree.Slot{num: 0},
         {:literal, "\ndef\n"}
       ]}
     assert value.slots == ["foobar"]
@@ -142,12 +143,12 @@ defmodule LiveData.Tracked.BasicTest do
     # Compiler can't reason across functions, this will return two nested statics
 
     assert value.template == {:make_map, nil, [
-      {{:literal, :child}, %LiveData.Tracked.Tree.Slot{num: 0}}
+      {{:literal, :child}, %LiveData.Tracked.FragmentTree.Slot{num: 0}}
     ]}
     [child_static] = value.slots
 
     assert child_static.template == {:make_map, nil, [
-      {{:literal, :data}, %LiveData.Tracked.Tree.Slot{num: 0}}
+      {{:literal, :data}, %LiveData.Tracked.FragmentTree.Slot{num: 0}}
     ]}
     assert child_static.slots == [123]
   end
@@ -168,5 +169,21 @@ defmodule LiveData.Tracked.BasicTest do
       error
     )
   end
+
+  #test "lifecycle hook works in root fragment" do
+  #  module = define_module! do
+  #    use LiveData.Tracked
+
+  #    defmodule TestHook do
+  #      @behaviour LiveData.Tracked.LifecycleHook
+  #    end
+
+  #    deft testing(data) do
+  #      %{
+  #        a: lifecycle_hook(TestHook, [data[:a]])
+  #      }
+  #    end
+  #  end
+  #end
 
 end

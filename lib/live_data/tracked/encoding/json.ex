@@ -1,5 +1,5 @@
 defmodule LiveData.Tracked.Encoding.JSON do
-  alias LiveData.Tracked.Tree
+  alias LiveData.Tracked.FragmentTree
   alias LiveData.Tracked.Aliases
 
   @op_render 0
@@ -20,7 +20,7 @@ defmodule LiveData.Tracked.Encoding.JSON do
     Enum.map_reduce(ops, state, &format_op(&1, &2))
   end
 
-  def format_op({:set_fragment, ref, %Tree.Template{} = template}, state) do
+  def format_op({:set_fragment, ref, %FragmentTree.Template{} = template}, state) do
     {id, state} = Map.get_and_update!(state, :fragment_aliases, &Aliases.alias_for(ref, &1))
     {["$t", template_id | slots], state} = escape_fragment(template, state)
     out = [@op_set_fragment_root_template, id, template_id | slots]
@@ -58,13 +58,13 @@ defmodule LiveData.Tracked.Encoding.JSON do
     raise "unimpl"
   end
 
-  def escape_fragment(%Tree.Ref{} = ref, state) do
+  def escape_fragment(%FragmentTree.Ref{} = ref, state) do
     {id, state} = Map.get_and_update!(state, :fragment_aliases, &Aliases.alias_for(ref, &1))
     out = ["$r", id]
     {out, state}
   end
 
-  def escape_fragment(%Tree.Template{} = template, state) do
+  def escape_fragment(%FragmentTree.Template{} = template, state) do
     {id, state} = Map.get_and_update!(state, :template_aliases, &Aliases.alias_for(template.id, &1))
     {escaped_slots, state} = Enum.map_reduce(template.slots, state, &escape_fragment(&1, &2))
     out = ["$t", id | escaped_slots]
@@ -99,7 +99,7 @@ defmodule LiveData.Tracked.Encoding.JSON do
   def escape_fragment("$f", state), do: {["$e", "$f"], state}
   def escape_fragment(binary, state) when is_binary(binary), do: {binary, state}
 
-  def escape_template(%Tree.Slot{num: slot_num}, state) do
+  def escape_template(%FragmentTree.Slot{num: slot_num}, state) do
     {["$s", slot_num], state}
   end
 

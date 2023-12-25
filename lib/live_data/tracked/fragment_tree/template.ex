@@ -1,4 +1,4 @@
-defmodule LiveData.Tracked.Tree.Template do
+defmodule LiveData.Tracked.FragmentTree.Template do
   @moduledoc false
 
   defstruct id: nil, slots: []

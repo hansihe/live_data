@@ -5,7 +5,7 @@ defmodule LiveData.Tracked.Apply do
   #
   # Used by tests.
 
-  alias LiveData.Tracked.Tree
+  alias LiveData.Tracked.FragmentTree
 
   defstruct templates: %{},
             fragments: %{},
@@ -37,7 +37,7 @@ defmodule LiveData.Tracked.Apply do
     apply_refs(fragment, state)
   end
 
-  def apply_refs(%Tree.Template{} = template, state) do
+  def apply_refs(%FragmentTree.Template{} = template, state) do
     inner_template_ctx =
       template.slots
       |> Enum.with_index()
@@ -49,7 +49,7 @@ defmodule LiveData.Tracked.Apply do
     render_template(template_structure, inner_template_ctx, state)
   end
 
-  def apply_refs(%Tree.Ref{} = ref, state) do
+  def apply_refs(%FragmentTree.Ref{} = ref, state) do
     fragment = Map.fetch!(state.fragments, ref)
     apply_refs(fragment, state)
   end
@@ -81,7 +81,7 @@ defmodule LiveData.Tracked.Apply do
     atom
   end
 
-  def render_template(%Tree.Slot{num: num}, ctx, _state) do
+  def render_template(%FragmentTree.Slot{num: num}, ctx, _state) do
     Map.fetch!(ctx, num)
   end
 
