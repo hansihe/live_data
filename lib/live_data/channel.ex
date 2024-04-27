@@ -49,15 +49,15 @@ defmodule LiveData.Channel do
     mount(params, from, phx_socket)
   end
 
-  #@impl true
-  #def handle_call(msg, _from, socket) do
+  # @impl true
+  # def handle_call(msg, _from, socket) do
   #  IO.inspect(msg)
   #  true = false
-  #end
+  # end
 
-  #def handle_info({:DOWN, ref, _, _, _reason}, ref) do
+  # def handle_info({:DOWN, ref, _, _, _reason}, ref) do
   #  {:stop, {:shutdown, :closed}, ref}
-  #end
+  # end
 
   def handle_info(
         {:DOWN, _ref, _typ, transport_pid, _reason},
@@ -83,6 +83,7 @@ defmodule LiveData.Channel do
   defp call_handler({module, function}, params) do
     apply(module, function, [params])
   end
+
   defp call_handler(fun, params) when is_function(fun, 1) do
     fun.(params)
   end
@@ -148,7 +149,7 @@ defmodule LiveData.Channel do
 
     state = %{state | tracked_state: tracked_state, encoding_state: encoding_state}
 
-    if LiveData.debug_prints?(), do: IO.inspect encoded_ops
+    if LiveData.debug_prints?(), do: IO.inspect(encoded_ops)
     state = push(state, "o", %{"o" => encoded_ops})
     state
   end
@@ -173,7 +174,7 @@ defmodule LiveData.Channel do
       true -> nil
       false -> :code.ensure_loaded(module)
     end
+
     function_exported?(module, function, arity)
   end
-
 end

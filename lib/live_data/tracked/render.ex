@@ -28,7 +28,7 @@ defmodule LiveData.Tracked.Render do
 
     active = %{root => nil}
     active = add_active(state.fragments[root_id].values[root_key].value, active, state)
-    #state = assign_aliases(active, state)
+    # state = assign_aliases(active, state)
 
     # TODO garbage collect state
 
@@ -38,9 +38,9 @@ defmodule LiveData.Tracked.Render do
       end)
 
     state = %{
-      state |
-      sent_templates: MapSet.union(state.sent_templates, state.new_templates),
-      new_templates: MapSet.new()
+      state
+      | sent_templates: MapSet.union(state.sent_templates, state.new_templates),
+        new_templates: MapSet.new()
     }
 
     fragment_set_ops =
@@ -58,11 +58,12 @@ defmodule LiveData.Tracked.Render do
 
     # TODO minimize diffs
 
-    ops = Enum.concat([
-      template_set_ops,
-      fragment_set_ops,
-      [{:render, root}]
-    ])
+    ops =
+      Enum.concat([
+        template_set_ops,
+        fragment_set_ops,
+        [{:render, root}]
+      ])
 
     {ops, state}
   end
@@ -80,7 +81,7 @@ defmodule LiveData.Tracked.Render do
     }
   end
 
-  #def assign_aliases(active, state) do
+  # def assign_aliases(active, state) do
   #  Enum.reduce(active, state, fn {ref, nil}, state ->
   #    if Map.has_key?(state.aliases, ref) do
   #      state
@@ -92,7 +93,7 @@ defmodule LiveData.Tracked.Render do
   #      }
   #    end
   #  end)
-  #end
+  # end
 
   def add_active(tree, acc, state) do
     {:ok, _tree, new} = traverse(tree, %{}, &add_active_traversal_fn/2)
@@ -115,12 +116,13 @@ defmodule LiveData.Tracked.Render do
         {:ok, _tree, state} = traverse(slot_tree, state, &add_active_traversal_fn/2)
         state
       end)
+
     {:ok, nil, state}
   end
 
-  #def render_prepass_mapper(%Tree.Static{template: {:slot, 0}} = static, state) do
+  # def render_prepass_mapper(%Tree.Static{template: {:slot, 0}} = static, state) do
   #  true = false
-  #end
+  # end
 
   def render_prepass_mapper(%RenderTree.Keyed{} = keyed, state) do
     id = keyed.id
@@ -153,10 +155,10 @@ defmodule LiveData.Tracked.Render do
           update_in(state.fragments[id].values[keyed.key], fn item ->
             if debug_mode?() and item.generation == state.generation and item.value != value do
               raise Tracked.KeyedException,
-              mfa: keyed_mfa,
-              line: nil,
-              previous: item.value,
-              next: value
+                mfa: keyed_mfa,
+                line: nil,
+                previous: item.value,
+                next: value
             end
 
             item
@@ -173,7 +175,7 @@ defmodule LiveData.Tracked.Render do
 
     ref = %FragmentTree.Ref{
       id: id,
-      key: keyed.key,
+      key: keyed.key
     }
 
     {:ok, ref, state}
@@ -181,6 +183,7 @@ defmodule LiveData.Tracked.Render do
 
   def render_prepass_mapper(%RenderTree.Static{} = static, state) do
     id = static.id
+
     state =
       case Map.has_key?(state.templates, id) do
         true ->
@@ -188,19 +191,19 @@ defmodule LiveData.Tracked.Render do
 
         false ->
           state = %{
-            state |
-            templates: Map.put(state.templates, id, static.template),
-            new_templates: MapSet.put(state.new_templates, id)
+            state
+            | templates: Map.put(state.templates, id, static.template),
+              new_templates: MapSet.put(state.new_templates, id)
           }
 
           state
       end
 
-
-    {slots, state} = Enum.map_reduce(static.slots, state, fn slot, state ->
-      {:ok, value, state} = traverse(slot, state, &render_prepass_mapper/2)
-      {value, state}
-    end)
+    {slots, state} =
+      Enum.map_reduce(static.slots, state, fn slot, state ->
+        {:ok, value, state} = traverse(slot, state, &render_prepass_mapper/2)
+        {value, state}
+      end)
 
     template = %FragmentTree.Template{
       id: id,
@@ -231,7 +234,7 @@ defmodule LiveData.Tracked.Render do
   # Otherwise, we need to render.
   def needs_render?(_item, _keyed, _gen), do: true
 
-  #def expand(tree) do
+  # def expand(tree) do
   #  {:ok, out, nil} =
   #    traverse(tree, nil, fn
   #      %Tree.Cond{render: render}, nil ->
@@ -244,7 +247,7 @@ defmodule LiveData.Tracked.Render do
   #    end)
 
   #  out
-  #end
+  # end
 
   def traverse(%FragmentTree.Ref{} = op, state, mapper) do
     {:ok, value, state} = mapper.(op, state)

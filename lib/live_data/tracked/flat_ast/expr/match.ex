@@ -16,16 +16,21 @@ defmodule Expr.Match do
 end
 
 defimpl Expr, for: Expr.Match do
-
   def transform(%Expr.Match{} = expr, acc, fun) do
     {new_pattern, acc} = fun.(:pattern, :lhs, expr.pattern, acc)
     {new_rhs, acc} = fun.(:value, :rhs, expr.rhs, acc)
-    {new_binds, acc} = Enum.reduce(expr.binds, {[], acc}, fn bind, {list, acc} ->
-      {new, acc} = fun.(:bind, nil, bind, acc)
-      {[new | list], acc}
-    end)
+
+    {new_binds, acc} =
+      Enum.reduce(expr.binds, {[], acc}, fn bind, {list, acc} ->
+        {new, acc} = fun.(:bind, nil, bind, acc)
+        {[new | list], acc}
+      end)
+
     new_expr = %{expr | pattern: new_pattern, binds: new_binds, rhs: new_rhs}
     {new_expr, acc}
   end
 
+  def location(%Expr.Match{location: loc}) do
+    loc
+  end
 end

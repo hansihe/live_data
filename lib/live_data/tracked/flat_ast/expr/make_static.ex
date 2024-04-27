@@ -17,7 +17,6 @@ defmodule Expr.MakeStatic do
 end
 
 defimpl Expr, for: Expr.MakeStatic do
-
   def transform(%Expr.MakeStatic{} = expr, acc, fun) do
     {new_slots, acc} =
       expr.slots
@@ -25,8 +24,12 @@ defimpl Expr, for: Expr.MakeStatic do
       |> Enum.map_reduce(acc, fn {elem, idx}, acc ->
         fun.(:value, idx, elem, acc)
       end)
+
     new_expr = %{expr | slots: new_slots}
     {new_expr, acc}
   end
 
+  def location(%Expr.MakeStatic{}) do
+    nil
+  end
 end

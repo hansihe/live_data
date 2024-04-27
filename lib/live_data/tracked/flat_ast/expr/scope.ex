@@ -24,7 +24,6 @@ defmodule LiveData.Tracked.FlatAst.Expr.Scope do
 end
 
 defimpl Expr, for: Expr.Scope do
-
   def transform(%Expr.Scope{exprs: exprs} = expr, acc, fun) do
     num_items = Enum.count(exprs)
 
@@ -39,4 +38,7 @@ defimpl Expr, for: Expr.Scope do
     {new_expr, acc}
   end
 
+  def location(%Expr.Scope{location: loc}) do
+    loc
+  end
 end

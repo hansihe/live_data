@@ -10,23 +10,23 @@ defmodule LiveData.Tracked.TestHelpers do
     {:ok, trace_collector_pid} = TraceCollector.ensure_started()
     :ok = TraceCollector.trace_module(trace_collector_pid, module_name, true)
 
-    {:module, ^module_name, _binary, _term} = try do
-      out = Module.create(module_name, ast, opts)
+    {:module, ^module_name, _binary, _term} =
+      try do
+        out = Module.create(module_name, ast, opts)
 
-      if print_trace do
-        {:ok, traces} = TraceCollector.get_module_traces(module_name)
-        IO.puts(inspect(traces, pretty: true, limit: :infinity))
+        if print_trace do
+          {:ok, traces} = TraceCollector.get_module_traces(module_name)
+          IO.puts(inspect(traces, pretty: true, limit: :infinity))
+        end
+
+        out
+      rescue
+        e ->
+          {:ok, traces} = TraceCollector.get_module_traces(module_name)
+          IO.puts(inspect(traces, pretty: true, limit: :infinity))
+
+          reraise e, __STACKTRACE__
       end
-
-      out
-    rescue
-      e ->
-        {:ok, traces} = TraceCollector.get_module_traces(module_name)
-        IO.puts(inspect(traces, pretty: true, limit: :infinity))
-
-        reraise e, __STACKTRACE__
-    end
-
 
     module_name
   end
@@ -53,6 +53,7 @@ defmodule LiveData.Tracked.TestHelpers do
   defmacro try_define_module(do: body) do
     location = Macro.Env.location(__CALLER__)
     body_escaped = Macro.escape(body)
+
     quote do
       try_define_module_ast(unquote(body_escaped), unquote(location))
     end
@@ -68,5 +69,4 @@ defmodule LiveData.Tracked.TestHelpers do
       define_module_ast!(unquote(body_escaped), unquote(location), unquote(print_trace))
     end
   end
-
 end

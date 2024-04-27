@@ -35,15 +35,13 @@ defmodule Expr.Case do
 
   def finish(cas) do
     %{
-      cas |
-      clauses: Enum.reverse(cas.clauses)
+      cas
+      | clauses: Enum.reverse(cas.clauses)
     }
   end
-
 end
 
 defimpl Expr, for: Expr.Case do
-
   def transform(%Expr.Case{} = expr, acc, fun) do
     {new_value, acc} = fun.(:value, :value, expr.value, acc)
 
@@ -52,7 +50,8 @@ defimpl Expr, for: Expr.Case do
       |> Enum.with_index()
       |> Enum.map_reduce(acc, fn
         {%Expr.Case.Clause{} = clause, idx}, acc ->
-          {{new_pattern, new_binds}, acc} = fun.(:pattern, {idx, :pattern}, {clause.pattern, clause.binds}, acc)
+          {{new_pattern, new_binds}, acc} =
+            fun.(:pattern, {idx, :pattern}, {clause.pattern, clause.binds}, acc)
 
           {new_guard, acc} =
             if clause.guard do
@@ -63,11 +62,15 @@ defimpl Expr, for: Expr.Case do
 
           {new_body, acc} = fun.(:scope, {idx, :body}, clause.body, acc)
 
-          {%{clause | pattern: new_pattern, binds: new_binds, guard: new_guard, body: new_body}, acc}
+          {%{clause | pattern: new_pattern, binds: new_binds, guard: new_guard, body: new_body},
+           acc}
       end)
 
     new_expr = %{expr | value: new_value, clauses: clauses}
     {new_expr, acc}
   end
 
+  def location(%Expr.Case{location: loc}) do
+    loc
+  end
 end

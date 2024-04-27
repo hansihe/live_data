@@ -30,9 +30,8 @@ defmodule LiveData.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:phoenix, "~> 1.6.15"},
-      {:jason, "~> 1.2"},
-
+      {:phoenix, "~> 1.7"},
+      {:jason, "~> 1.4"},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]
   end
@@ -92,7 +91,7 @@ defmodule LiveData.MixProject do
         LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope,
         LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent,
         LiveData.Tracked.FlatAst.PDAst,
-        LiveData.Tracked.FlatAst.Util.Transcribe,
+        LiveData.Tracked.FlatAst.Util.Transcribe
       ]
     ]
   end

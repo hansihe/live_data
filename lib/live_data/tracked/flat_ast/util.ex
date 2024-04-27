@@ -113,8 +113,10 @@ defmodule LiveData.Tracked.FlatAst.Util do
     reduce_expr(expr, [], fn
       :value, _selector, child_expr_id, acc ->
         [child_expr_id | acc]
+
       :scope, _selector, child_expr_id, acc ->
         [child_expr_id | acc]
+
       _, _, _, acc ->
         acc
     end)

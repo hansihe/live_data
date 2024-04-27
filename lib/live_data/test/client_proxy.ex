@@ -9,15 +9,13 @@ defmodule LiveData.Test.ClientProxy do
   @moduledoc false
   use GenServer
 
-  defstruct [
-    test_supervisor: nil,
-    endpoint: nil,
-    module: nil,
-    caller: nil,
-    router: nil,
-    pid: nil,
-    apply: Apply.new()
-  ]
+  defstruct test_supervisor: nil,
+            endpoint: nil,
+            module: nil,
+            caller: nil,
+            router: nil,
+            pid: nil,
+            apply: Apply.new()
 
   def init(opts) do
     %{
@@ -35,19 +33,21 @@ defmodule LiveData.Test.ClientProxy do
     }
 
     start_ref = make_ref()
-    state = case start_supervised_channel(state, start_ref) do
-      {:ok, pid} ->
-        mon_ref = Process.monitor(pid)
 
-        receive do
-          {^start_ref, {:ok, _join_reply}} ->
-            Process.demonitor(mon_ref, [:flush])
-            %{state | pid: pid}
+    state =
+      case start_supervised_channel(state, start_ref) do
+        {:ok, pid} ->
+          mon_ref = Process.monitor(pid)
 
-          {:DOWN, ^mon_ref, _, _, reason} ->
-            throw({:stop, reason, state})
-        end
-    end
+          receive do
+            {^start_ref, {:ok, _join_reply}} ->
+              Process.demonitor(mon_ref, [:flush])
+              %{state | pid: pid}
+
+            {:DOWN, ^mon_ref, _, _, reason} ->
+              throw({:stop, reason, state})
+          end
+      end
 
     # TODO do initial render in mount
     state =
@@ -69,16 +69,14 @@ defmodule LiveData.Test.ClientProxy do
   end
 
   def handle_info(
-    %Phoenix.Socket.Message{
-      event: "o",
-      topic: _topic,
-      payload: %{"o" => ops}
-    },
-    state
-  ) do
-    state = %{state |
-      apply: Apply.apply(ops, state.apply)
-    }
+        %Phoenix.Socket.Message{
+          event: "o",
+          topic: _topic,
+          payload: %{"o" => ops}
+        },
+        state
+      ) do
+    state = %{state | apply: Apply.apply(ops, state.apply)}
 
     {:noreply, state}
   end
@@ -112,7 +110,7 @@ defmodule LiveData.Test.ClientProxy do
         live_data_encoding: LiveData.Tracked.Encoding.Identity
       },
       transport_pid: self(),
-      serializer: __MODULE__,
+      serializer: __MODULE__
     }
 
     params = %{}
@@ -135,5 +133,4 @@ defmodule LiveData.Test.ClientProxy do
   Encoding used by the Channel serializer.
   """
   def encode!(msg), do: msg
-
 end

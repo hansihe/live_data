@@ -25,9 +25,11 @@ defmodule LiveData.Tracked.TraceCollector do
     Process.put(@trace_key_pd_key, trace_key)
     inner.(trace_key)
   end
+
   def with_trace(pid, {_module, _function, _arity} = mfa, inner) do
     {:ok, {^pid, mfa} = trace_key} = GenServer.call(pid, {:begin_trace, mfa})
     Process.put(@trace_key_pd_key, trace_key)
+
     try do
       inner.(trace_key)
     after
@@ -49,6 +51,7 @@ defmodule LiveData.Tracked.TraceCollector do
   def in_test?(nil) do
     false
   end
+
   def in_test?({pid, mfa}) do
     {:ok, in_test} = GenServer.call(pid, {:is_in_test, mfa})
     in_test
@@ -61,6 +64,7 @@ defmodule LiveData.Tracked.TraceCollector do
   def log(nil, _tag, _data) do
     :ok
   end
+
   def log({pid, mfa} = _trace_key, tag, data) do
     :ok = GenServer.cast(pid, {:log, mfa, tag, data})
   end
@@ -73,18 +77,14 @@ defmodule LiveData.Tracked.TraceCollector do
     GenServer.call(__MODULE__, {:get_trace, mfa})
   end
 
-  defstruct [
-    selectors: %{},
-    traces: %{},
-  ]
+  defstruct selectors: %{},
+            traces: %{}
 
   defmodule Trace do
-    defstruct [
-      mfa: nil,
-      finished: false,
-      in_test: false,
-      log: [],
-    ]
+    defstruct mfa: nil,
+              finished: false,
+              in_test: false,
+              log: []
   end
 
   @impl true
@@ -98,8 +98,7 @@ defmodule LiveData.Tracked.TraceCollector do
 
   def get_selector_data(state, {module, _f, _a} = mfa) do
     with :error <- Map.fetch(state.selectors, {:module, module}),
-         :error <- Map.fetch(state.selectors, {:mfa, mfa})
-    do
+         :error <- Map.fetch(state.selectors, {:mfa, mfa}) do
       :error
     end
   end
@@ -113,9 +112,7 @@ defmodule LiveData.Tracked.TraceCollector do
 
   @impl true
   def handle_call({:trace_selector, selector, in_test}, _from, state) do
-    state = %{state |
-      selectors: Map.put(state.selectors, selector, in_test)
-    }
+    state = %{state | selectors: Map.put(state.selectors, selector, in_test)}
     {:reply, :ok, state}
   end
 
@@ -125,13 +122,16 @@ defmodule LiveData.Tracked.TraceCollector do
 
     case traced do
       {:ok, in_test} ->
-      state = %{state |
-        traces: Map.put(state.traces, mfa, %Trace{
-          in_test: in_test,
-          mfa: mfa
-        })
-      }
-      {:reply, {:ok, {self(), mfa}}, state}
+        state = %{
+          state
+          | traces:
+              Map.put(state.traces, mfa, %Trace{
+                in_test: in_test,
+                mfa: mfa
+              })
+        }
+
+        {:reply, {:ok, {self(), mfa}}, state}
 
       :error ->
         {:reply, {:ok, nil}, state}
@@ -140,9 +140,11 @@ defmodule LiveData.Tracked.TraceCollector do
 
   @impl true
   def handle_call({:end_trace, mfa}, _from, state) do
-    state = update_trace(state, mfa, fn trace ->
-      %{trace | finished: true}
-    end)
+    state =
+      update_trace(state, mfa, fn trace ->
+        %{trace | finished: true}
+      end)
+
     {:reply, :ok, state}
   end
 
@@ -184,12 +186,11 @@ defmodule LiveData.Tracked.TraceCollector do
 
   @impl true
   def handle_cast({:log, mfa, tag, data}, state) do
-    state = update_trace(state, mfa, fn trace ->
-      %{trace |
-        log: [{tag, data} | trace.log]
-      }
-    end)
+    state =
+      update_trace(state, mfa, fn trace ->
+        %{trace | log: [{tag, data} | trace.log]}
+      end)
+
     {:noreply, state}
   end
-
 end

@@ -14,9 +14,11 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     acc = norm_items_rec(inner, acc)
     norm_items_rec(tail, acc)
   end
+
   defp norm_items_rec([head | tail], acc) do
     norm_items_rec(tail, [head | acc])
   end
+
   defp norm_items_rec([], acc) do
     acc
   end
@@ -39,8 +41,14 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
       |> Enum.reduce(fun, fn {{opts, args, guard, body}, clause_idx}, fun ->
         location = make_location(opts)
 
-        {binds_set, patterns, scope} = handle_patterns_scope(
-            args, expr_id, clause_idx, scope, out)
+        {binds_set, patterns, scope} =
+          handle_patterns_scope(
+            args,
+            expr_id,
+            clause_idx,
+            scope,
+            out
+          )
 
         guard_expr =
           case guard do
@@ -63,10 +71,12 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
 
   def from_pattern(tup, binds, scope, out) when is_tuple(tup) and tuple_size(tup) != 3 do
     tup_list = Tuple.to_list(tup)
-    {elems, binds} = Enum.map_reduce(tup_list, binds, fn elem, binds ->
-      {binds, pattern_id} = from_pattern(elem, binds, scope, out)
-      {pattern_id, binds}
-    end)
+
+    {elems, binds} =
+      Enum.map_reduce(tup_list, binds, fn elem, binds ->
+        {binds, pattern_id} = from_pattern(elem, binds, scope, out)
+        {pattern_id, binds}
+      end)
 
     pattern_id = PDAst.add_pattern(out, {:tuple, elems})
 
@@ -124,12 +134,28 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
 
     {rhs_expr, scope} = from_expr(rhs, scope, out)
 
-    {binds_set, [pat], scope} = handle_patterns_scope(
-        [lhs], expr_id, nil, scope, out)
+    {binds_set, [pat], scope} =
+      handle_patterns_scope(
+        [lhs],
+        expr_id,
+        nil,
+        scope,
+        out
+      )
 
     location = make_location(opts)
-    :ok = PDAst.set_expr(out, expr_id, Expr.Match.new(
-          pat, binds_set, rhs_expr, location))
+
+    :ok =
+      PDAst.set_expr(
+        out,
+        expr_id,
+        Expr.Match.new(
+          pat,
+          binds_set,
+          rhs_expr,
+          location
+        )
+      )
 
     {expr_id, scope}
   end
@@ -138,6 +164,7 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
   def from_expr({:%, _, [_, {:%{}, _, _}]} = expr, scope, out) do
     from_map_expr(expr, scope, out)
   end
+
   def from_expr({:%{}, _, _} = expr, scope, out) do
     from_map_expr(expr, scope, out)
   end
@@ -162,8 +189,14 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
           ^args_count = Enum.count(args)
           location = make_location(clause_opts)
 
-          {binds_set, patterns, scope} = handle_patterns_scope(
-              args, expr_id, clause_idx, scope, out)
+          {binds_set, patterns, scope} =
+            handle_patterns_scope(
+              args,
+              expr_id,
+              clause_idx,
+              scope,
+              out
+            )
 
           {body_expr, _scope} = from_expr(body, scope, out)
 
@@ -180,13 +213,14 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     outer_scope = scope
 
     items = norm_items(items)
+
     grouped_items =
       Enum.group_by(items, fn
         {:into, _} -> :meta
         {:do, _} -> :meta
         {:uniq, _} -> :meta
         {:reduce, _} -> :meta
-        {_, _} -> throw "unrecognized key!"
+        {_, _} -> throw("unrecognized key!")
         _ -> :loop
       end)
 
@@ -210,15 +244,21 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     {item_exprs, scope} =
       Enum.map_reduce(Enum.with_index(loop_items), scope, fn
         {{:<-, _opts, [pattern, expr]}, item_idx}, scope ->
-          {binds_set, [pat], scope} = handle_patterns_scope(
-              [pattern], expr_id, item_idx, scope, out)
+          {binds_set, [pat], scope} =
+            handle_patterns_scope(
+              [pattern],
+              expr_id,
+              item_idx,
+              scope,
+              out
+            )
 
           {expr_id, scope} = from_expr(expr, scope, out)
 
           {{:loop, pat, binds_set, expr_id}, scope}
 
         {{:<<>>, _opts, _inner}, _item_idx}, _scope ->
-          throw "binary generators unimplemented"
+          throw("binary generators unimplemented")
 
         filter, scope ->
           {expr_id, scope} = from_expr(filter, scope, out)
@@ -248,8 +288,14 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
         {{:->, clause_opts, [[pattern], body]}, clause_idx}, case_expr ->
           location = make_location(clause_opts)
 
-          {binds_set, [pattern], scope} = handle_patterns_scope(
-              [pattern], expr_id, clause_idx, scope, out)
+          {binds_set, [pattern], scope} =
+            handle_patterns_scope(
+              [pattern],
+              expr_id,
+              clause_idx,
+              scope,
+              out
+            )
 
           {body_expr, _scope} = from_expr(body, scope, out)
 
@@ -270,13 +316,15 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
   end
 
   def from_expr({:<<>>, opts, elems}, scope, out) do
-    {items, scope} = Enum.map_reduce(elems, scope, fn
-      {:"::", _, [expr, specifiers]}, scope ->
-        # TODO information loss in opts?
-        # TODO size specifier
-        {expr, scope} = from_expr(expr, scope, out)
-        {{expr, specifiers}, scope}
-    end)
+    {items, scope} =
+      Enum.map_reduce(elems, scope, fn
+        {:"::", _, [expr, specifiers]}, scope ->
+          # TODO information loss in opts?
+          # TODO size specifier
+          {expr, scope} = from_expr(expr, scope, out)
+          {{expr, specifiers}, scope}
+      end)
+
     location = make_location(opts)
     expr_id = PDAst.add_expr(out, Expr.MakeBinary.new(items, location))
     {expr_id, scope}
@@ -332,8 +380,17 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     {arg_exprs, scope} = Enum.map_reduce(args, scope, &from_expr(&1, &2, out))
 
     location = make_location(opts)
-    expr_id = PDAst.add_expr(out, Expr.CallMF.new(
-          nil, function_expr, arg_exprs, location))
+
+    expr_id =
+      PDAst.add_expr(
+        out,
+        Expr.CallMF.new(
+          nil,
+          function_expr,
+          arg_exprs,
+          location
+        )
+      )
 
     {expr_id, scope}
   end
@@ -346,8 +403,17 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     {arg_exprs, scope} = Enum.map_reduce(args, scope, &from_expr(&1, &2, out))
 
     location = make_merge_locations([opts1, opts2])
-    expr_id = PDAst.add_expr(out, Expr.CallMF.new(
-          module_expr, function_expr, arg_exprs, location))
+
+    expr_id =
+      PDAst.add_expr(
+        out,
+        Expr.CallMF.new(
+          module_expr,
+          function_expr,
+          arg_exprs,
+          location
+        )
+      )
 
     {expr_id, scope}
   end
@@ -356,8 +422,16 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     {top_expr, scope} = from_expr(top, scope, out)
 
     location = make_merge_locations([opts1, opts2])
-    expr_id = PDAst.add_expr(out, Expr.AccessField.new(
-          top_expr, field, location))
+
+    expr_id =
+      PDAst.add_expr(
+        out,
+        Expr.AccessField.new(
+          top_expr,
+          field,
+          location
+        )
+      )
 
     {expr_id, scope}
   end
@@ -367,8 +441,16 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     {arg_exprs, scope} = Enum.map_reduce(args, scope, &from_expr(&1, &2, out))
 
     location = make_merge_locations([opts1, opts2])
-    expr_id = PDAst.add_expr(out, Expr.CallValue.new(
-          fun_expr, arg_exprs, location))
+
+    expr_id =
+      PDAst.add_expr(
+        out,
+        Expr.CallValue.new(
+          fun_expr,
+          arg_exprs,
+          location
+        )
+      )
 
     {expr_id, scope}
   end
@@ -388,6 +470,7 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     {struct_expr, scope} = from_expr(struct_expr, scope, out)
     from_map_prior_expr(struct_expr, map_expr, loc, scope, out)
   end
+
   def from_map_expr({:%{}, opts, _} = map_expr, scope, out) do
     loc = make_location(opts)
     from_map_prior_expr(nil, map_expr, loc, scope, out)
@@ -395,12 +478,19 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
 
   # `from_map_prior_expr` handles the prior map part of map construction (`|`).
   # It calls into `from_map_inner_expr`.
-  def from_map_prior_expr(struct_expr, {:%{}, opts1, [{:|, opts2, [prior, kvs]}]}, loc1, scope, out) do
+  def from_map_prior_expr(
+        struct_expr,
+        {:%{}, opts1, [{:|, opts2, [prior, kvs]}]},
+        loc1,
+        scope,
+        out
+      ) do
     loc2 = merge_location(make_location(opts1), make_location(opts2))
     loc = merge_location(loc1, loc2)
     {prior_expr, scope} = from_expr(prior, scope, out)
     from_map_inner_expr(struct_expr, prior_expr, loc, kvs, scope, out)
   end
+
   def from_map_prior_expr(struct_expr, {:%{}, opts, kvs}, loc1, scope, out) do
     loc = merge_location(loc1, make_location(opts))
     from_map_inner_expr(struct_expr, nil, loc, kvs, scope, out)
@@ -438,10 +528,11 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
   def handle_patterns_scope(patterns, within_expr_id, selector, scope, out) do
     {binds_vars, patterns} = handle_patterns(patterns, scope, out)
 
-    {scope, binds_set} = Enum.reduce(binds_vars, {scope, MapSet.new()}, fn var, {scope, binds_set} ->
-      bind = PDAst.add_bind(out, within_expr_id, selector, var)
-      {Map.put(scope, var, bind), MapSet.put(binds_set, bind)}
-    end)
+    {scope, binds_set} =
+      Enum.reduce(binds_vars, {scope, MapSet.new()}, fn var, {scope, binds_set} ->
+        bind = PDAst.add_bind(out, within_expr_id, selector, var)
+        {Map.put(scope, var, bind), MapSet.put(binds_set, bind)}
+      end)
 
     {binds_set, patterns, scope}
   end

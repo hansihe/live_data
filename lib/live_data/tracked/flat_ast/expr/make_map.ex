@@ -18,19 +18,20 @@ defmodule Expr.MakeMap do
 end
 
 defimpl Expr, for: Expr.MakeMap do
-
   def transform(%Expr.MakeMap{} = expr, acc, fun) do
-    {new_struct, acc} = if expr.struct do
-      fun.(:value, :struct, expr.struct, acc)
-    else
-      {nil, acc}
-    end
+    {new_struct, acc} =
+      if expr.struct do
+        fun.(:value, :struct, expr.struct, acc)
+      else
+        {nil, acc}
+      end
 
-    {new_prev, acc} = if expr.prev do
-      fun.(:value, :prev, expr.prev, acc)
-    else
-      {nil, acc}
-    end
+    {new_prev, acc} =
+      if expr.prev do
+        fun.(:value, :prev, expr.prev, acc)
+      else
+        {nil, acc}
+      end
 
     {new_kvs, acc} =
       expr.kvs
@@ -42,12 +43,16 @@ defimpl Expr, for: Expr.MakeMap do
       end)
 
     new_expr = %{
-      expr |
-      struct: new_struct,
-      prev: new_prev,
-      kvs: new_kvs
+      expr
+      | struct: new_struct,
+        prev: new_prev,
+        kvs: new_kvs
     }
+
     {new_expr, acc}
   end
 
+  def location(%Expr.MakeMap{location: loc}) do
+    loc
+  end
 end

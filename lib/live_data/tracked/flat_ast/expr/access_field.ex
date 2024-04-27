@@ -14,15 +14,16 @@ defmodule Expr.AccessField do
       location: location
     }
   end
-
 end
 
 defimpl Expr, for: Expr.AccessField do
-
   def transform(%Expr.AccessField{} = expr, acc, fun) do
     {new_top, acc} = fun.(:value, :top, expr.top, acc)
     new_expr = %{expr | top: new_top}
     {new_expr, acc}
   end
 
+  def location(%Expr.AccessField{location: loc}) do
+    loc
+  end
 end

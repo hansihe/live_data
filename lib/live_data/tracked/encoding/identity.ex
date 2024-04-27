@@ -1,5 +1,4 @@
 defmodule LiveData.Tracked.Encoding.Identity do
-
   def new do
     nil
   end
@@ -7,5 +6,4 @@ defmodule LiveData.Tracked.Encoding.Identity do
   def format(ops, nil) do
     {ops, nil}
   end
-
 end

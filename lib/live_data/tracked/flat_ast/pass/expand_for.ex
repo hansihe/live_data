@@ -34,20 +34,22 @@ defmodule LiveData.Tracked.FlatAst.Pass.ExpandFor do
     {acc_bind, ast} = FlatAst.add_bind(ast, fn_expr_id, 0, acc_variable_name)
     {acc_pat, ast} = FlatAst.add_pattern(ast, {:bind, acc_bind})
 
-    {new_binds, ast} = Enum.reduce(binds, {[acc_bind], ast}, fn bind, {new_binds, ast} ->
-      data = FlatAst.get_bind_data(ast, bind)
-      {new_bind, ast} = FlatAst.add_bind(ast, fn_expr_id, 0, data.variable)
-      {[new_bind | new_binds], ast}
-    end)
+    {new_binds, ast} =
+      Enum.reduce(binds, {[acc_bind], ast}, fn bind, {new_binds, ast} ->
+        data = FlatAst.get_bind_data(ast, bind)
+        {new_bind, ast} = FlatAst.add_bind(ast, fn_expr_id, 0, data.variable)
+        {[new_bind | new_binds], ast}
+      end)
 
     {res, ast} = rec(items, acc_bind, inner, ast)
 
-    {inner_fn, ast} = FlatAst.add_expr(
-      ast,
-      Expr.Fn.new(2)
-      |> Expr.Fn.add_clause([pattern, acc_pat], new_binds, nil, res)
-      |> Expr.Fn.finish()
-    )
+    {inner_fn, ast} =
+      FlatAst.add_expr(
+        ast,
+        Expr.Fn.new(2)
+        |> Expr.Fn.add_clause([pattern, acc_pat], new_binds, nil, res)
+        |> Expr.Fn.finish()
+      )
 
     FlatAst.add_expr(ast, %Expr.CallMF{
       module: Enum,
@@ -55,8 +57,8 @@ defmodule LiveData.Tracked.FlatAst.Pass.ExpandFor do
       args: [
         body,
         acc,
-        inner_fn,
-      ],
+        inner_fn
+      ]
     })
   end
 
@@ -64,7 +66,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.ExpandFor do
     raise "not implemented"
   end
 
-  #def rec([{:filter, body} | items], acc, inner, ast) do
+  # def rec([{:filter, body} | items], acc, inner, ast) do
   #  {res, ast} = rec(items, acc, inner, ast)
 
   #  FlatAst.add_expr(
@@ -74,7 +76,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.ExpandFor do
   #    |> Expr.Case.add_clause(:todo, :todo, nil, acc)
   #    |> Expr.Case.finish()
   #  )
-  #end
+  # end
 
   # Map comprehension without uniq
   def do_expand_for(e = %Expr.For{uniq: false, reduce: nil, reduce_pat: nil}, expr_id, ast) do
@@ -88,8 +90,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.ExpandFor do
 
     # Reversal.
     # This replaces the `for` expression.
-    ast = FlatAst.set_expr(ast, expr_id,
-      Expr.CallMF.new(Enum, :reverse, [result]))
+    ast = FlatAst.set_expr(ast, expr_id, Expr.CallMF.new(Enum, :reverse, [result]))
 
     ast
   end
@@ -103,5 +104,4 @@ defmodule LiveData.Tracked.FlatAst.Pass.ExpandFor do
   def do_expand_for(%Expr.For{into: nil, uniq: false}, _expr_id, _ast) do
     raise "not implemented"
   end
-
 end

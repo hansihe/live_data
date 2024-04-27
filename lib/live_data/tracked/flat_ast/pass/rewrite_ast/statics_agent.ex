@@ -7,31 +7,27 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent do
   alias LiveData.Tracked.FlatAst
   alias LiveData.Tracked.FragmentTree.Slot
 
-  defstruct [
-    statics: %{},
-    # The traversed set is the set of expressions where, although they
-    # where not rewritten into a static, the compiler knew how to
-    # traverse them.
-    # These are things like `case` or `for` where we cannot know at
-    # compile-time the shape of the data.
-    traversed: MapSet.new(),
-    # The dependencies set is the set of expressions depended on
-    # by any rewritten static.
-    # Added in one of two cases:
-    # * Explicitly depended on by a slot
-    # * Implicitly depended on by a traversed expression
-    dependencies: MapSet.new(),
-  ]
+  defstruct statics: %{},
+            # The traversed set is the set of expressions where, although they
+            # where not rewritten into a static, the compiler knew how to
+            # traverse them.
+            # These are things like `case` or `for` where we cannot know at
+            # compile-time the shape of the data.
+            traversed: MapSet.new(),
+            # The dependencies set is the set of expressions depended on
+            # by any rewritten static.
+            # Added in one of two cases:
+            # * Explicitly depended on by a slot
+            # * Implicitly depended on by a traversed expression
+            dependencies: MapSet.new()
 
   defmodule Static do
-    defstruct [
-      state: :unfinished,
-      next_slot_id: 0,
-      slots: [],
-      key: nil,
-      # Set when static is finalized.
-      static_structure: nil,
-    ]
+    defstruct state: :unfinished,
+              next_slot_id: 0,
+              slots: [],
+              key: nil,
+              # Set when static is finalized.
+              static_structure: nil
   end
 
   def spawn do
@@ -60,10 +56,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent do
         get_and_update_in(state.statics[static_id], fn
           %Static{state: :unfinished} = static ->
             slot_id = static.next_slot_id
-            static = %{ static |
-              next_slot_id: slot_id + 1,
-              slots: [expr_id | static.slots]
-            }
+            static = %{static | next_slot_id: slot_id + 1, slots: [expr_id | static.slots]}
             {slot_id, static}
         end)
 
@@ -85,11 +78,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent do
       update_in(state.statics[static_id], fn
         %Static{state: :unfinished} = static ->
           slots = Enum.reverse(static.slots)
-          %{ static |
-            state: :finished,
-            slots: slots,
-            static_structure: static_structure
-          }
+          %{static | state: :finished, slots: slots, static_structure: static_structure}
       end)
     end)
   end
@@ -112,12 +101,13 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent do
 
   def add_dependencies(state, ast, exprs) do
     Agent.update(state, fn state ->
-      canonical_exprs = Enum.map(exprs, fn
-        nil -> nil
-        {:expr, _eid} = expr_id -> expr_id
-        {:bind, _bid} = bind_id -> FlatAst.get_bind_data(ast, bind_id).expr
-        {:literal, _lid} = literal_id -> literal_id
-      end)
+      canonical_exprs =
+        Enum.map(exprs, fn
+          nil -> nil
+          {:expr, _eid} = expr_id -> expr_id
+          {:bind, _bid} = bind_id -> FlatAst.get_bind_data(ast, bind_id).expr
+          {:literal, _lid} = literal_id -> literal_id
+        end)
 
       update_in(state.dependencies, &MapSet.union(&1, MapSet.new(canonical_exprs)))
     end)
@@ -138,5 +128,4 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent do
         return
     end
   end
-
 end

@@ -6,7 +6,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
   actual rewriting.
   """
 
-  #alias LiveData.Tracked.TraceCollector
+  # alias LiveData.Tracked.TraceCollector
   alias LiveData.Tracked.FlatAst
   alias LiveData.Tracked.FlatAst.Expr
   alias LiveData.Tracked.FlatAst.PDAst
@@ -16,11 +16,11 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
   def rewrite_scope(expr_id, data, rewritten, transcribed, out) do
     %Expr.Scope{exprs: scope_exprs} = FlatAst.get(data.ast, expr_id)
     old_rewritten = rewritten
-    #if LiveData.debug_prints?() do
+    # if LiveData.debug_prints?() do
     #  IO.inspect scope_exprs
     #  IO.inspect Enum.filter(scope_exprs, &MapSet.member?(data.dependencies, &1))
     #  IO.inspect Enum.filter(scope_exprs, &MapSet.member?(data.traversed, &1))
-    #end
+    # end
 
     # Step 1: Transcribe dependencies
     {transcribed_exprs, transcribed} =
@@ -37,7 +37,8 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
       |> Enum.filter(&MapSet.member?(data.traversed, &1))
       |> Enum.map_reduce(rewritten, &rewrite_scope_expr(&1, data, &2, transcribed, out))
 
-    {rewritten_result, _rewritten} = rewrite_scope_expr(expr_id, data, rewritten, transcribed, out)
+    {rewritten_result, _rewritten} =
+      rewrite_scope_expr(expr_id, data, rewritten, transcribed, out)
 
     scope_exprs = Util.recursive_flatten([transcribed_exprs, rewritten_exprs, rewritten_result])
 
@@ -56,22 +57,24 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
         {[], rewritten}
 
       # Special case, the whole static is useless.
-      {:ok, %{state: :finished, static_structure: %Slot{num: 0}, slots: [_inner_expr_id], key: nil}} ->
+      {:ok,
+       %{state: :finished, static_structure: %Slot{num: 0}, slots: [_inner_expr_id], key: nil}} ->
         raise "unimpl"
 
       # rewritten = Map.put(rewritten, expr_id, inner_expr_id)
       # {inner_expr_id, rewritten}
 
       {:ok, %{state: :finished, static_structure: static, slots: slots, key: key}} ->
-        new_slots = Enum.map(slots, fn
-          {:bind, _bid} = bind ->
-            data = FlatAst.get_bind_data(data.ast, bind)
-            new_expr = Map.get(rewritten, data.expr) || Map.fetch!(transcribed, data.expr)
-            PDAst.add_bind(out, new_expr, data.selector, data.variable)
+        new_slots =
+          Enum.map(slots, fn
+            {:bind, _bid} = bind ->
+              data = FlatAst.get_bind_data(data.ast, bind)
+              new_expr = Map.get(rewritten, data.expr) || Map.fetch!(transcribed, data.expr)
+              PDAst.add_bind(out, new_expr, data.selector, data.variable)
 
-          {:expr, _eid} = expr_id ->
-            Map.get(rewritten, expr_id) || Map.fetch!(transcribed, expr_id)
-        end)
+            {:expr, _eid} = expr_id ->
+              Map.get(rewritten, expr_id) || Map.fetch!(transcribed, expr_id)
+          end)
 
         new_key =
           if key do
@@ -137,7 +140,10 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
 
   def rewrite_resolve({:bind, _bid} = bind, data, rewritten, transcribed, out) do
     data = FlatAst.get_bind_data(data.ast, bind)
-    new_expr = {:expr, _new_eid} = Map.get(rewritten, data.expr) || Map.fetch!(transcribed, data.expr)
+
+    new_expr =
+      {:expr, _new_eid} = Map.get(rewritten, data.expr) || Map.fetch!(transcribed, data.expr)
+
     PDAst.add_bind(out, new_expr, data.selector, data.variable)
   end
 
@@ -149,5 +155,4 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
     {:literal_value, literal} = FlatAst.get(data.ast, literal_id)
     PDAst.add_literal(out, literal)
   end
-
 end

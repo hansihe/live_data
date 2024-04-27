@@ -53,5 +53,4 @@ defmodule LiveData.Tracked.FlatAst.Pass.CalculateNesting do
         acc
     end)
   end
-
 end

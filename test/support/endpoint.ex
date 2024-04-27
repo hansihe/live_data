@@ -3,25 +3,26 @@ defmodule LiveData.Test.Endpoint do
 
   defoverridable config: 1, config: 2
 
-  socket "/data", LiveData.Test.DataRouter,
+  socket("/data", LiveData.Test.DataRouter,
     websocket: true,
     longpoll: true
+  )
 
-  #def config(:pubsub_server), do: nil
-  ##def config(arg, default) do
+  # def config(:pubsub_server), do: nil
+  ## def config(arg, default) do
   ##  IO.inspect {arg, default}
   ##  true = false
-  ##end
-  ##def config(which), do: super(which)
-  ##def config(which, default), do: super(which, default)
-  #def config(which, default \\ nil) do
+  ## end
+  ## def config(which), do: super(which)
+  ## def config(which, default), do: super(which, default)
+  # def config(which, default \\ nil) do
   #  IO.puts "got config #{inspect(which)}"
   #  default
-  #end
+  # end
 
-  #def call(conn, _) do
+  # def call(conn, _) do
   #  true = false
-  #end
+  # end
 
   import ExUnit.Callbacks, only: [start_supervised!: 1]
 

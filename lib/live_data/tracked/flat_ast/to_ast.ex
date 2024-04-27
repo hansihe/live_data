@@ -63,10 +63,12 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
             to_pattern(pattern_id, gen, ast, opts)
           end)
 
-        gen = Enum.reduce(clause.binds, gen, fn bind, gen ->
-          data = FlatAst.get_bind_data(ast, bind)
-          Map.put(gen, bind, data.variable) # TODO decollide?
-        end)
+        gen =
+          Enum.reduce(clause.binds, gen, fn bind, gen ->
+            data = FlatAst.get_bind_data(ast, bind)
+            # TODO decollide?
+            Map.put(gen, bind, data.variable)
+          end)
 
         # TODO handle guards
         nil = clause.guard
@@ -89,14 +91,14 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
         _scope_mode,
         _opts
       ) do
-    #{inner_ast, gen} = to_expr(inner, gen, ast, scope_mode, opts)
+    # {inner_ast, gen} = to_expr(inner, gen, ast, scope_mode, opts)
 
-    #unique_var = make_unique_var(opts)
-    #gen = Map.put(gen, {:expr_bind, eid, 0}, unique_var)
+    # unique_var = make_unique_var(opts)
+    # gen = Map.put(gen, {:expr_bind, eid, 0}, unique_var)
 
     raise "unimpl"
 
-    #{{:=, make_opts(), [var_to_expr(unique_var, gen), inner_ast]}, gen}
+    # {{:=, make_opts(), [var_to_expr(unique_var, gen), inner_ast]}, gen}
   end
 
   def to_expr_inner(
@@ -151,7 +153,14 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     {{:=, ast_opts, [pattern_ast, rhs_ast]}, gen}
   end
 
-  def to_expr_inner(%Expr.MakeMap{struct: nil, prev: nil, kvs: kvs, location: location}, _expr_id, gen, ast, scope_mode, opts) do
+  def to_expr_inner(
+        %Expr.MakeMap{struct: nil, prev: nil, kvs: kvs, location: location},
+        _expr_id,
+        gen,
+        ast,
+        scope_mode,
+        opts
+      ) do
     {kvs_ast, gen} =
       Enum.map_reduce(kvs, gen, fn {key, value}, gen ->
         {key_ast, gen} = to_expr(key, gen, ast, scope_mode, opts)
@@ -169,26 +178,48 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     {[{:|, make_opts(), [head_ast, tail_ast]}], gen}
   end
 
-  def to_expr_inner(%Expr.MakeTuple{elements: elems, location: location}, _expr_id, gen, ast, scope_mode, opts) do
+  def to_expr_inner(
+        %Expr.MakeTuple{elements: elems, location: location},
+        _expr_id,
+        gen,
+        ast,
+        scope_mode,
+        opts
+      ) do
     {elems, gen} = Enum.map_reduce(elems, gen, &to_expr(&1, &2, ast, scope_mode, opts))
 
     ast_opts = make_opts(location: location)
     {{:{}, ast_opts, elems}, gen}
   end
 
-  def to_expr_inner(%Expr.MakeBinary{components: components, location: location}, _expr_id, gen, ast, scope_mode, opts) do
-    {elems, gen} = Enum.map_reduce(components, gen, fn
-      {expr, specifier}, gen ->
-        # TODO size specifier
-        {elem_ast, gen} = to_expr(expr, gen, ast, scope_mode, opts)
-        {{:"::", [], [elem_ast, specifier]}, gen}
-    end)
+  def to_expr_inner(
+        %Expr.MakeBinary{components: components, location: location},
+        _expr_id,
+        gen,
+        ast,
+        scope_mode,
+        opts
+      ) do
+    {elems, gen} =
+      Enum.map_reduce(components, gen, fn
+        {expr, specifier}, gen ->
+          # TODO size specifier
+          {elem_ast, gen} = to_expr(expr, gen, ast, scope_mode, opts)
+          {{:"::", [], [elem_ast, specifier]}, gen}
+      end)
 
     ast_opts = make_opts(location: location)
     {{:<<>>, ast_opts, elems}, gen}
   end
 
-  def to_expr_inner(%Expr.Case{} = expr, {:expr, _eid} = outer_expr_id, gen, ast, scope_mode, opts) do
+  def to_expr_inner(
+        %Expr.Case{} = expr,
+        {:expr, _eid} = outer_expr_id,
+        gen,
+        ast,
+        scope_mode,
+        opts
+      ) do
     {value_ast, gen} = to_expr(expr.value, gen, ast, scope_mode, opts)
 
     {clauses, gen} =
@@ -221,7 +252,9 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     # We currently do not handle into.
     # Just assert that we collect into an empty list.
     case expr.into do
-      nil -> nil
+      nil ->
+        nil
+
       {:literal, _lit} = literal_id ->
         {:literal_value, []} = FlatAst.get(ast, literal_id)
     end
@@ -260,8 +293,15 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     {{{:., ast_opts, [top_expr, field]}, [no_parens: true], []}, gen}
   end
 
-  def to_expr_inner(%Expr.Var{ref_expr: ref_expr, location: location}, _expr_id, gen, _ast, _scope_mode, _opts) do
-    #var = Map.get(ast.variables, ref_expr) || Map.fetch!(gen, ref_expr)
+  def to_expr_inner(
+        %Expr.Var{ref_expr: ref_expr, location: location},
+        _expr_id,
+        gen,
+        _ast,
+        _scope_mode,
+        _opts
+      ) do
+    # var = Map.get(ast.variables, ref_expr) || Map.fetch!(gen, ref_expr)
     var = Map.fetch!(gen, ref_expr)
     ast_opts = make_opts(location: location)
     var_ast = var_to_expr(var, gen, ast_opts)
@@ -298,6 +338,40 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
 
     ast_opts = make_opts(location: expr.location)
     {{{:., [], [value_ast]}, ast_opts, args_ast}, gen}
+  end
+
+  def to_expr_inner(
+        %Expr.Intrinsic{type: :to_string, args: [inner], location: loc},
+        _expr_id,
+        gen,
+        ast,
+        scope_mode,
+        opts
+      ) do
+    {value_ast, gen} = to_expr(inner, gen, ast, scope_mode, opts)
+    ast_opts = make_opts(location: loc)
+    {{{:., [], [String.Chars, :to_string]}, ast_opts, [value_ast]}, gen}
+  end
+
+  def to_expr_inner(
+    %Expr.LifecycleHook{module: module, args: args},
+    _expr_id,
+    gen,
+    ast,
+    scope_mode,
+    opts
+  ) do
+    {args, gen} = Enum.map_reduce(args, gen, &to_expr(&1, &2, ast, scope_mode, opts))
+
+    expr =
+      quote do
+        %LiveData.Tracked.RenderTree.LifecycleHook{
+          module: unquote(module),
+          args: unquote(args)
+        }
+      end
+
+    {expr, gen}
   end
 
   def to_expr_inner(
@@ -354,10 +428,11 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
   end
 
   def to_pattern_inner({:tuple, elems}, _pattern_id, gen, ast, opts) do
-    {new_elems, gen} =  Enum.map_reduce(elems, gen, fn
-      elem, gen ->
-        to_pattern(elem, gen, ast, opts)
-    end)
+    {new_elems, gen} =
+      Enum.map_reduce(elems, gen, fn
+        elem, gen ->
+          to_pattern(elem, gen, ast, opts)
+      end)
 
     {{:{}, make_opts(), new_elems}, gen}
   end
@@ -393,6 +468,7 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
 
   def make_opts(args \\ []) do
     base = [generated: true]
+
     case Keyword.fetch(args, :location) do
       {:ok, {line, nil}} -> [{:line, line} | base]
       {:ok, {line, column}} -> [{:line, line}, {:column, column} | base]
@@ -403,7 +479,13 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
   def filter_non_return_literals(exprs, acc \\ [])
   def filter_non_return_literals([], []), do: []
   def filter_non_return_literals([ret_val], acc), do: Enum.reverse([ret_val | acc])
-  def filter_non_return_literals([val | tail], acc) when is_number(val), do: filter_non_return_literals(tail, acc)
-  def filter_non_return_literals([val | tail], acc) when is_binary(val), do: filter_non_return_literals(tail, acc)
-  def filter_non_return_literals([val | tail], acc), do: filter_non_return_literals(tail, [val, acc])
+
+  def filter_non_return_literals([val | tail], acc) when is_number(val),
+    do: filter_non_return_literals(tail, acc)
+
+  def filter_non_return_literals([val | tail], acc) when is_binary(val),
+    do: filter_non_return_literals(tail, acc)
+
+  def filter_non_return_literals([val | tail], acc),
+    do: filter_non_return_literals(tail, [val, acc])
 end

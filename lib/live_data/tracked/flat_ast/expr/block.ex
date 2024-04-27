@@ -18,7 +18,6 @@ defmodule LiveData.Tracked.FlatAst.Expr.Block do
 end
 
 defimpl Expr, for: Expr.Block do
-
   def transform(%Expr.Block{exprs: exprs} = expr, acc, fun) do
     num_items = Enum.count(exprs)
 
@@ -33,4 +32,7 @@ defimpl Expr, for: Expr.Block do
     {new_expr, acc}
   end
 
+  def location(%Expr.Block{location: loc}) do
+    loc
+  end
 end

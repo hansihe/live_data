@@ -2,9 +2,9 @@ defmodule LiveData.Tracked.Encoding.Binary do
   alias LiveData.Tracked.FragmentTree
   alias LiveData.Tracked.Render
 
-  #@op_render 0
+  # @op_render 0
   @op_put_fragment 1
-  #@op_delete_fragment 2
+  # @op_delete_fragment 2
 
   @expr_substitute_fragment 0
   @expr_render_template 1
@@ -38,7 +38,9 @@ defmodule LiveData.Tracked.Encoding.Binary do
 
     encoded_slots = Enum.map(slots, &encode_body(&1, state))
 
-    [<<@expr_render_template, template_id::integer-size(32), num_slots::integer-size(16)>>, encoded_slots]
+    [
+      <<@expr_render_template, template_id::integer-size(32), num_slots::integer-size(16)>>,
+      encoded_slots
+    ]
   end
-
 end

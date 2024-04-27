@@ -9,6 +9,7 @@ defmodule LiveData.Tracked.FlatAst do
 
   Contains utilities for converting from and to the regular Elixir AST.
   """
+alias LiveData.Tracked.FlatAst.Expr
 
   defstruct exprs: %{},
             patterns: %{},
@@ -101,7 +102,7 @@ defmodule LiveData.Tracked.FlatAst do
     data = %{
       expr: to,
       selector: selector,
-      variable: variable,
+      variable: variable
     }
 
     case Map.fetch(ast.binds_back, data) do
@@ -110,11 +111,14 @@ defmodule LiveData.Tracked.FlatAst do
 
       :error ->
         {id, ast} = make_bind_id(ast)
-        ast = %{ast |
-          binds: Map.put(ast.binds, id, data),
-          binds_back: Map.put(ast.binds_back, data, id),
-          binds_by_expr_id: Map.update(ast.binds_by_expr_id, to, [id], &[id | &1]),
+
+        ast = %{
+          ast
+          | binds: Map.put(ast.binds, id, data),
+            binds_back: Map.put(ast.binds_back, data, id),
+            binds_by_expr_id: Map.update(ast.binds_by_expr_id, to, [id], &[id | &1])
         }
+
         {id, ast}
     end
   end
@@ -160,4 +164,18 @@ defmodule LiveData.Tracked.FlatAst do
   def get(_ast, {:bind, _bid} = id) do
     id
   end
+
+  def get_location(ast, {:expr, _eid} = id) do
+    expr = get(ast, id)
+    get_location(ast, expr)
+  end
+
+  def get_location(_ast, {:literal, _lid}) do
+    nil
+  end
+
+  def get_location(_ast, expr) when is_struct(expr) do
+    Expr.location(expr)
+  end
+
 end

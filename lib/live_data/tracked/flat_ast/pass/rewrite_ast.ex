@@ -24,7 +24,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst do
   alias LiveData.Tracked.FlatAst.PDAst
   alias LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent
 
-  def rewrite(ast, full_mfa, nesting_set) do
+  def rewrite(ast, file, full_mfa, nesting_set) do
     {:ok, out} = PDAst.init()
     new_root = PDAst.add_expr(out)
     :ok = PDAst.set_root(out, new_root)
@@ -42,10 +42,12 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst do
         {:ok, state} = StaticsAgent.spawn()
 
         # First subpass of rewrite
-        _rewrite_root = __MODULE__.MakeStructure.rewrite_make_structure(clause.body, ast, state)
+        _rewrite_root = __MODULE__.MakeStructure.rewrite_make_structure(clause.body, file, ast, state)
 
-        {:ok, %{statics: statics, traversed: traversed, dependencies: dependencies}} = StaticsAgent.finish(state)
-        #IO.inspect {traversed, dependencies}, label: :travdep
+        {:ok, %{statics: statics, traversed: traversed, dependencies: dependencies}} =
+          StaticsAgent.finish(state)
+
+        # IO.inspect {traversed, dependencies}, label: :travdep
         TraceCollector.log(:travdep, {traversed, dependencies})
 
         data = %{
@@ -57,15 +59,24 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst do
         }
 
         # Second subpass of rewrite
-        expanded_dependencies = __MODULE__.ExpandDependencies.expand_dependencies(MapSet.to_list(dependencies), data, ast)
+        expanded_dependencies =
+          __MODULE__.ExpandDependencies.expand_dependencies(
+            MapSet.to_list(dependencies),
+            data,
+            ast
+          )
+
         data = Map.put(data, :dependencies, expanded_dependencies)
 
         # Third subpass of rewrite
         rewritten = %{}
         transcribed = %{ast.root => new_root}
-        {new_body, _transcribed} = __MODULE__.RewriteScope.rewrite_scope(clause.body, data, rewritten, transcribed, out)
+
+        {new_body, _transcribed} =
+          __MODULE__.RewriteScope.rewrite_scope(clause.body, data, rewritten, transcribed, out)
 
         old_root = ast.root
+
         new_binds =
           clause.binds
           |> Enum.map(fn bind ->

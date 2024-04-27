@@ -7,33 +7,34 @@ defmodule LiveData.Tracked.FragmentTreeTest do
   alias LiveData.Tracked.Encoding
 
   def make_module() do
-    module = define_module! do
-      use LiveData.Tracked
+    module =
+      define_module! do
+        use LiveData.Tracked
 
-      deft render(assigns) do
-        %{
-          categories:
-            for category <- assigns.categories do
-              keyed category.id do
-                %{
-                  posts:
-                    for post <- category.posts do
-                      keyed(post.id, track(render_post(post)))
-                    end
-                }
+        deft render(assigns) do
+          %{
+            categories:
+              for category <- assigns.categories do
+                keyed category.id do
+                  %{
+                    posts:
+                      for post <- category.posts do
+                        keyed(post.id, track(render_post(post)))
+                      end
+                  }
+                end
               end
-            end
-        }
-      end
+          }
+        end
 
-      deft render_post(post) do
-        %{
-          title: post.title,
-          content: post.text,
-          postcode: post.postcode
-        }
+        deft render_post(post) do
+          %{
+            title: post.title,
+            content: post.text,
+            postcode: post.postcode
+          }
+        end
       end
-    end
 
     module
   end
@@ -57,14 +58,14 @@ defmodule LiveData.Tracked.FragmentTreeTest do
       ]
     }
 
-    IO.inspect module.__tracked_meta__render__1__(:statics)
+    IO.inspect(module.__tracked_meta__render__1__(:statics))
 
     out = module.__tracked__render__(assigns)
-    IO.inspect out
-    IO.inspect out.render.()
+    IO.inspect(out)
+    IO.inspect(out.render.())
   end
 
-  #deft flutter_view_test() do
+  # deft flutter_view_test() do
   #  scaffold(
   #    app_bar: app_bar(
   #      title: text("hello world")
@@ -76,7 +77,7 @@ defmodule LiveData.Tracked.FragmentTreeTest do
   #      on_pressed_event: "add_post"
   #    ),
   #  )
-  #end
+  # end
 
   # def proto__track_render2__(:make_ids, state) do
   #  scope_id = {__MODULE__, :render2, 1}
@@ -168,7 +169,7 @@ defmodule LiveData.Tracked.FragmentTreeTest do
   test "foobar" do
     module = make_module()
 
-    #statics = module.__tracked_meta__render__1__(:statics)
+    # statics = module.__tracked_meta__render__1__(:statics)
 
     assigns = %{
       categories: [
@@ -204,7 +205,7 @@ defmodule LiveData.Tracked.FragmentTreeTest do
               title: "klcbnbwbre",
               text: "casdsoapoads",
               postcode: 5321
-            },
+            }
           ]
         },
         %{
@@ -245,48 +246,50 @@ defmodule LiveData.Tracked.FragmentTreeTest do
               title: "alkwewjhbeah",
               text: "aehjerwbhg",
               postcode: 5321
-            },
+            }
           ]
         }
       ]
     }
 
-    tree_state = RenderDiff.new() #keyed_ids)
+    # keyed_ids)
+    tree_state = RenderDiff.new()
     encoder = Encoding.JSON.new()
     apply_state = Apply.new()
 
     rendered = module.__tracked__render__(assigns)
     {ops1, tree_state} = RenderDiff.render(rendered, tree_state)
 
-    #IO.inspect(ops1)
+    # IO.inspect(ops1)
 
     {_json_ops, _encoder} = Encoding.JSON.format(ops1, encoder)
-    #IO.inspect json_ops
+    # IO.inspect json_ops
 
     apply_state = Apply.apply(ops1, apply_state)
+
     assert apply_state.rendered == %{
-      categories: [
-        %{
-          posts: [
-            %{content: "hoo", postcode: 1123, title: "woo"},
-            %{content: "foobar", postcode: 5321, title: "hello_world"},
-            %{content: "ahjsdiuhasuyidh", postcode: 5321, title: "asdsadasd"},
-            %{content: "kasdtyucqapqlkdsah", postcode: 5321, title: "lsasdgvcx"},
-            %{content: "casdsoapoads", postcode: 5321, title: "klcbnbwbre"}
-          ]
-        },
-        %{
-          posts: [
-            %{content: "dsaiuyasdf", postcode: 5321, title: "uifsaydufih"},
-            %{content: "kduyasd", postcode: 5321, title: "asdlkw"},
-            %{content: "lksdfsafg", postcode: 5321, title: "lkajdeb"},
-            %{content: "wlejakyhdi", postcode: 5321, title: "kjankwne"},
-            %{content: "ae;akjwoieoiu", postcode: 5321, title: "aenwbehh"},
-            %{content: "aehjerwbhg", postcode: 5321, title: "alkwewjhbeah"}
-          ]
-        }
-      ]
-    }
+             categories: [
+               %{
+                 posts: [
+                   %{content: "hoo", postcode: 1123, title: "woo"},
+                   %{content: "foobar", postcode: 5321, title: "hello_world"},
+                   %{content: "ahjsdiuhasuyidh", postcode: 5321, title: "asdsadasd"},
+                   %{content: "kasdtyucqapqlkdsah", postcode: 5321, title: "lsasdgvcx"},
+                   %{content: "casdsoapoads", postcode: 5321, title: "klcbnbwbre"}
+                 ]
+               },
+               %{
+                 posts: [
+                   %{content: "dsaiuyasdf", postcode: 5321, title: "uifsaydufih"},
+                   %{content: "kduyasd", postcode: 5321, title: "asdlkw"},
+                   %{content: "lksdfsafg", postcode: 5321, title: "lkajdeb"},
+                   %{content: "wlejakyhdi", postcode: 5321, title: "kjankwne"},
+                   %{content: "ae;akjwoieoiu", postcode: 5321, title: "aenwbehh"},
+                   %{content: "aehjerwbhg", postcode: 5321, title: "alkwewjhbeah"}
+                 ]
+               }
+             ]
+           }
 
     assigns = %{
       categories: [
@@ -331,24 +334,25 @@ defmodule LiveData.Tracked.FragmentTreeTest do
     rendered = module.__tracked__render__(assigns)
     {ops2, _tree_state} = RenderDiff.render(rendered, tree_state)
 
-    #IO.inspect(ops2)
+    # IO.inspect(ops2)
 
     {_json_ops, _encoder} = Encoding.JSON.format(ops2, encoder)
-    #IO.inspect json_ops
+    # IO.inspect json_ops
 
     apply_state = Apply.apply(ops2, apply_state)
+
     assert apply_state.rendered == %{
-      categories: [
-        %{
-          posts: [
-            %{content: "hoo", postcode: 1234, title: "woo"},
-            %{content: "hoo", postcode: 1234, title: "woo"},
-            %{content: "hoo", postcode: 1234, title: "woo"},
-            %{content: "hoo", postcode: 1234, title: "woo"},
-            %{content: "foo", postcode: 1234, title: "foobar"}
-          ]
-        }
-      ]
-    }
+             categories: [
+               %{
+                 posts: [
+                   %{content: "hoo", postcode: 1234, title: "woo"},
+                   %{content: "hoo", postcode: 1234, title: "woo"},
+                   %{content: "hoo", postcode: 1234, title: "woo"},
+                   %{content: "hoo", postcode: 1234, title: "woo"},
+                   %{content: "foo", postcode: 1234, title: "foobar"}
+                 ]
+               }
+             ]
+           }
   end
 end

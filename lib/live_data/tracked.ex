@@ -28,7 +28,12 @@ defmodule LiveData.Tracked do
     descr = Macro.escape({__CALLER__.module, {name, args_count}})
 
     quote do
-      unquote(__MODULE__).validate_used!(unquote(__CALLER__.file), unquote(__CALLER__.module), unquote(__CALLER__.line))
+      unquote(__MODULE__).validate_used!(
+        unquote(__CALLER__.file),
+        unquote(__CALLER__.module),
+        unquote(__CALLER__.line)
+      )
+
       @phoenix_data_view_tracked unquote(descr)
       unquote(make_main_fun(:def, call, body, __CALLER__))
     end
@@ -40,7 +45,12 @@ defmodule LiveData.Tracked do
     descr = Macro.escape({__CALLER__.module, {name, args_count}})
 
     quote do
-      unquote(__MODULE__).validate_used!(unquote(__CALLER__.file), unquote(__CALLER__.module), unquote(__CALLER__.line))
+      unquote(__MODULE__).validate_used!(
+        unquote(__CALLER__.file),
+        unquote(__CALLER__.module),
+        unquote(__CALLER__.line)
+      )
+
       @phoenix_data_view_tracked unquote(descr)
       unquote(make_main_fun(:defp, call, body, __CALLER__))
     end
@@ -63,11 +73,11 @@ defmodule LiveData.Tracked do
 
   def validate_used!(file, module, line) do
     unless Module.has_attribute?(module, :phoenix_data_view_tracked) do
-      throw %CompileError{
+      throw(%CompileError{
         file: file,
         line: line,
         description: "`LiveData.Tracked` must be `use`d before calling `deft`"
-      }
+      })
     end
   end
 
@@ -83,11 +93,13 @@ defmodule LiveData.Tracked do
   end
 
   defp make_main_fun(kind, call, body, env) do
-    #IO.inspect Macro.Env.lookup_import(env, {:keyed, 2}), label: :lookup_import
+    # IO.inspect Macro.Env.lookup_import(env, {:keyed, 2}), label: :lookup_import
 
     wrapped_body =
       quote do
-        import LiveData.Tracked.Dummy, only: [keyed: 2, track: 1, lifecycle_hook: 1, lifecycle_hook: 2, custom_fragment: 1]
+        import LiveData.Tracked.Dummy,
+          only: [keyed: 2, track: 1, lifecycle_hook: 2, lifecycle_hook: 3, custom_fragment: 1]
+
         unquote(body)
       end
 

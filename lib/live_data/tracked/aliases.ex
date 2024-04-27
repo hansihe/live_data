@@ -17,6 +17,7 @@ defmodule LiveData.Tracked.Aliases do
           next_id: id + 1,
           ids: Map.put(ids, data, id)
         }
+
         {id, state}
     end
   end

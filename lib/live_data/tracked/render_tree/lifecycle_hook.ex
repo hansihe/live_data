@@ -8,5 +8,5 @@ defmodule LiveData.Tracked.RenderTree.LifecycleHook do
   value.
   """
 
-  defstruct id: nil, module: nil
+  defstruct id: nil, module: nil, args: []
 end

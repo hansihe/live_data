@@ -23,18 +23,18 @@ defmodule LiveData.Tracked.Diff do
       {:ok, _old_data} ->
         {[op], state}
 
-        #patches = diff_data(old_data, new_data)
+      # patches = diff_data(old_data, new_data)
 
-        #case patches do
-        #  :equal ->
-        #    {[], state}
+      # case patches do
+      #  :equal ->
+      #    {[], state}
 
-        #  _ ->
-        #    ops = [
-        #      {:patch_fragment, id, patches}
-        #    ]
-        #    {ops, state}
-        #end
+      #  _ ->
+      #    ops = [
+      #      {:patch_fragment, id, patches}
+      #    ]
+      #    {ops, state}
+      # end
 
       _ ->
         {[op], state}
@@ -57,17 +57,19 @@ defmodule LiveData.Tracked.Diff do
   end
 
   def diff_data(_old, %_{}) do
-    throw "structs are unsupported"
+    throw("structs are unsupported")
   end
 
   def diff_data(%{} = old, %{} = new) do
-    diffed = diff_keys(
-      Map.keys(old),
-      Map.keys(new),
-      old,
-      new,
-      []
-    )
+    diffed =
+      diff_keys(
+        Map.keys(old),
+        Map.keys(new),
+        old,
+        new,
+        []
+      )
+
     case diffed do
       [] -> :equal
       patches -> {:patch_map, patches}
@@ -82,13 +84,13 @@ defmodule LiveData.Tracked.Diff do
     end
   end
 
-  #def diff_slots([], []) do
+  # def diff_slots([], []) do
   #  []
-  #end
+  # end
 
-  #def diff_slots([old | old_tail], [new | new_tail]) do
+  # def diff_slots([old | old_tail], [new | new_tail]) do
   #  diffed = diff_data(old, new)
-  #end
+  # end
 
   def diff_keys([key | lt], [key | rt], old, new, acc) do
     # When keys match, we diff the value.
@@ -102,39 +104,45 @@ defmodule LiveData.Tracked.Diff do
       case diffed do
         :equal ->
           acc
+
         {:replace, new_value} ->
           [{:replace, key, new_value} | acc]
+
         {:patch, patch} ->
           [{:patch, key, patch} | acc]
       end
 
     diff_keys(lt, rt, old, new, acc)
   end
+
   def diff_keys([lh | lt], [rh | _rt] = rl, old, new, acc) when lh < rh do
     # Item in old but not in new, remove key.
     acc = [{:remove, lh} | acc]
     diff_keys(lt, rl, old, new, acc)
   end
+
   def diff_keys([lh | _lt] = ll, [rh | rt], old, new, acc) when lh > rh do
     # Item in new but not in old, add key.
     value = Map.fetch!(new, rh)
     acc = [{:add, rh, value} | acc]
     diff_keys(ll, rt, old, new, acc)
   end
+
   def diff_keys([lh | lt], [], old, new, acc) do
     # Remainder case for left list, remove key.
     acc = [{:remove, lh} | acc]
     diff_keys(lt, [], old, new, acc)
   end
+
   def diff_keys([], [rh | rt], old, new, acc) do
     # Remainder case for right list, add key.
     value = Map.fetch!(new, rh)
     acc = [{:add, rh, value} | acc]
     diff_keys([], rt, old, new, acc)
   end
+
   def diff_keys([], [], _old, _new, acc) do
     # Terminal case.
     acc
   end
-
 end

@@ -8,7 +8,13 @@ defmodule Expr.For do
   NOTE: Bitstring generators are TODOs.
   """
 
-  defstruct items: nil, into: nil, uniq: false, reduce: nil, reduce_pat: nil, inner: nil, location: nil
+  defstruct items: nil,
+            into: nil,
+            uniq: false,
+            reduce: nil,
+            reduce_pat: nil,
+            inner: nil,
+            location: nil
 
   def new(items, into, inner, location \\ nil) do
     %__MODULE__{
@@ -21,7 +27,6 @@ defmodule Expr.For do
 end
 
 defimpl Expr, for: Expr.For do
-
   def transform(%Expr.For{} = expr, acc, fun) do
     {new_items, acc} =
       expr.items
@@ -29,19 +34,25 @@ defimpl Expr, for: Expr.For do
       |> Enum.map_reduce(acc, fn
         {{:loop, pattern, binds, body}, idx}, acc ->
           {new_pattern, acc} = fun.(:pattern, {idx, :pattern}, pattern, acc)
-          {new_binds, acc} = Enum.reduce(binds, {[], acc}, fn bind, {list, acc} ->
-            {new, acc} = fun.(:bind, {idx, :pattern}, bind, acc)
-            {[new | list], acc}
-          end)
+
+          {new_binds, acc} =
+            Enum.reduce(binds, {[], acc}, fn bind, {list, acc} ->
+              {new, acc} = fun.(:bind, {idx, :pattern}, bind, acc)
+              {[new | list], acc}
+            end)
+
           {new_body, acc} = fun.(:scope, {idx, :generator}, body, acc)
           {{:loop, new_pattern, MapSet.new(new_binds), new_body}, acc}
 
         {{:bitstring_loop, pattern, binds, body}, idx}, acc ->
           {new_pattern, acc} = fun.(:pattern, {idx, :pattern}, pattern, acc)
-          {new_binds, acc} = Enum.reduce(binds, {[], acc}, fn bind, {list, acc} ->
-            {new, acc} = fun.(:bind, {idx, :pattern}, bind, acc)
-            {[new | list], acc}
-          end)
+
+          {new_binds, acc} =
+            Enum.reduce(binds, {[], acc}, fn bind, {list, acc} ->
+              {new, acc} = fun.(:bind, {idx, :pattern}, bind, acc)
+              {[new | list], acc}
+            end)
+
           {new_body, acc} = fun.(:scope, {idx, :generator}, body, acc)
           {{:bitstring_loop, new_pattern, MapSet.new(new_binds), new_body}, acc}
 
@@ -60,12 +71,16 @@ defimpl Expr, for: Expr.For do
     {new_inner, acc} = fun.(:scope, :inner, expr.inner, acc)
 
     new_expr = %{
-      expr |
-      items: new_items,
-      into: new_into,
-      inner: new_inner
+      expr
+      | items: new_items,
+        into: new_into,
+        inner: new_inner
     }
+
     {new_expr, acc}
   end
 
+  def location(%Expr.For{location: loc}) do
+    loc
+  end
 end

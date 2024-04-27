@@ -115,7 +115,11 @@ defmodule LiveData.Router do
 
     quote do
       # All channels under "dv:*" are reserved.
-      def __channel__("dv:c:" <> _rest), do: {LiveData.Channel, [assigns: %{live_data_handler: {unquote(env.module), :__live_data_handler__}}]}
+      def __channel__("dv:c:" <> _rest),
+        do:
+          {LiveData.Channel,
+           [assigns: %{live_data_handler: {unquote(env.module), :__live_data_handler__}}]}
+
       def __channel__("dv:" <> _rest), do: nil
       unquote(channel_defs)
       def __channel__(_topic), do: nil
@@ -124,7 +128,7 @@ defmodule LiveData.Router do
       def __live_data__(_route), do: nil
 
       def __live_data_handler__(%{"r" => route}) do
-        IO.inspect route
+        IO.inspect(route)
         __live_data__(route)
       end
     end

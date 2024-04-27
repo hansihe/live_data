@@ -1,11 +1,12 @@
 defprotocol LiveData.Tracked.FlatAst.Expr do
-
   @type t :: t()
 
   @type entry_kind :: :value | :bind | :bind_ref | :literal | :scope | :pattern
   @type entry_identifier :: any()
   @type expr_ref :: any()
   @type acc :: any()
+
+  @type location :: any()
 
   @type visitor :: (entry_kind(), entry_identifier(), expr_ref(), acc() -> {expr_ref(), acc()})
 
@@ -25,5 +26,8 @@ defprotocol LiveData.Tracked.FlatAst.Expr do
   """
   @spec transform(t(), acc(), visitor()) :: {t(), acc()}
   def transform(expr, acc, fun)
+
+  @spec location(t()) :: location()
+  def location(expr)
 
 end

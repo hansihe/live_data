@@ -17,22 +17,24 @@ defmodule LiveData.Tracked.FlatAst.Pass.ErrorOnStub do
     lifecycle_hook_lit = get_literal_or_nil(ast, :lifecycle_hook_stub)
 
     Util.traverse(ast, ast.root, nil, fn
-      #_id, %Expr.CallTracked{}
+      # _id, %Expr.CallTracked{}
 
       _id, %Expr.CallMF{module: ^dummy_module_lit} = expr, nil when dummy_module_lit != nil ->
         {line, _col} = expr.location
 
-        message = case expr.function do
-          ^keyed_lit ->
-            "deft error: `keyed` used in non-return position"
+        message =
+          case expr.function do
+            ^keyed_lit ->
+              "deft error: `keyed` used in non-return position"
 
-          ^tracked_lit ->
-            raise "unreachable"
-            #"deft error: `tracked` used in non-return position"
+            ^tracked_lit ->
+              raise "unreachable"
 
-          ^lifecycle_hook_lit ->
-            raise "unreachable"
-        end
+            # "deft error: `tracked` used in non-return position"
+
+            ^lifecycle_hook_lit ->
+              raise "unreachable"
+          end
 
         raise %CompileError{
           file: file,
@@ -48,5 +50,4 @@ defmodule LiveData.Tracked.FlatAst.Pass.ErrorOnStub do
 
     :ok
   end
-
 end

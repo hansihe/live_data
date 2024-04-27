@@ -3,173 +3,239 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
   import LiveData.Tracked.TestHelpers
 
   describe "maps" do
-
     test "in deft" do
-      module = define_module! do
-        use LiveData.Tracked
-        deft testing(v) do
-          %{
-            v: v.v,
-          }
+      module =
+        define_module! do
+          use LiveData.Tracked
+
+          deft testing(v) do
+            %{
+              v: v.v
+            }
+          end
         end
-      end
 
       value = module.__tracked__testing__(%{v: 123})
 
-      assert value.template == {:make_map, nil,
-        [{{:literal, :v}, %LiveData.Tracked.FragmentTree.Slot{num: 0}}]}
+      assert value.template ==
+               {:make_map, nil, [{{:literal, :v}, %LiveData.Tracked.FragmentTree.Slot{num: 0}}]}
+
       assert value.slots == [123]
     end
 
     test "priors in maps in deft not implemented" do
-      {:error, _, _, _, _} = try_define_module do
-        use LiveData.Tracked
-        deft testing do
-          %{ %{} | foo: :bar}
+      {:error, _, _, _, _} =
+        try_define_module do
+          use LiveData.Tracked
+
+          deft testing do
+            %{%{} | foo: :bar}
+          end
         end
-      end
     end
 
     test "structs in deft not implemented" do
-      {:error, _, _, _, _} = try_define_module do
-        use LiveData.Tracked
-        defstruct []
-        deft testing do
-          %__MODULE__{}
-        end
-      end
-    end
+      {:error, _, _, _, _} =
+        try_define_module do
+          use LiveData.Tracked
+          defstruct []
 
+          deft testing do
+            %__MODULE__{}
+          end
+        end
+    end
   end
 
   describe "string construction" do
     test "in deft" do
-      module = define_module! do
-        use LiveData.Tracked
-        deft testing(v) do
-          "hello #{v}"
+      module =
+        define_module! do
+          use LiveData.Tracked
+
+          deft testing(v) do
+            "hello #{v}"
+          end
         end
-      end
 
       value = module.__tracked__testing__("world")
 
-      assert value.template == {:make_binary,
-        [{:literal, "hello "}, %LiveData.Tracked.FragmentTree.Slot{num: 0}]}
+      assert value.template ==
+               {:make_binary,
+                [{:literal, "hello "}, %LiveData.Tracked.FragmentTree.Slot{num: 0}]}
+
       assert value.slots == ["world"]
+    end
+
+    test "with nested loops in deft" do
+      module =
+        define_module! do
+          use LiveData.Tracked
+
+          deft testing(v) do
+            """
+            hello
+            #{for n <- v do
+              "number #{n}"
+            end}
+            world
+            """
+          end
+        end
+
+      value = module.__tracked__testing__([1, 2, 3])
+
+      assert value.template ==
+               {:make_binary,
+                [
+                  {:literal, "hello\n"},
+                  %LiveData.Tracked.FragmentTree.Slot{num: 0},
+                  {:literal, "\nworld\n"}
+                ]}
+
+      assert [
+               [
+                 _item1,
+                 item2,
+                 _item3
+               ]
+             ] = value.slots
+
+      assert %LiveData.Tracked.RenderTree.Static{
+               template:
+                 {:make_binary,
+                  [
+                    {:literal, "number "},
+                    %LiveData.Tracked.FragmentTree.Slot{num: 0}
+                  ]},
+               slots: [2]
+             } = item2
     end
   end
 
   describe "lists" do
-
     test "in deft" do
-      _module = define_module! do
-        use LiveData.Tracked
-        deft testing(v) do
-          [
-            v.a,
-            v.b,
-            v.c,
-            1
-          ]
+      _module =
+        define_module! do
+          use LiveData.Tracked
+
+          deft testing(v) do
+            [
+              v.a,
+              v.b,
+              v.c,
+              1
+            ]
+          end
         end
-      end
     end
 
     test "in deft with tail" do
-      _module = define_module! do
-        use LiveData.Tracked
-        deft testing(v) do
-          [
-            v.a
-            | v.b
-          ]
-        end
-      end
-    end
+      _module =
+        define_module! do
+          use LiveData.Tracked
 
+          deft testing(v) do
+            [
+              v.a
+              | v.b
+            ]
+          end
+        end
+    end
   end
 
   describe "matching" do
-
     test "basic assignment matching" do
-      module = define_module! do
-        use LiveData.Tracked
+      module =
+        define_module! do
+          use LiveData.Tracked
 
-        deft testing(v) do
-          {:ok, v1} = v
-          %{foo: v1}
+          deft testing(v) do
+            {:ok, v1} = v
+            %{foo: v1}
+          end
         end
-      end
 
       value = module.__tracked__testing__({:ok, :yay})
 
-      assert value.template == {:make_map, nil, [{{:literal, :foo}, %LiveData.Tracked.FragmentTree.Slot{num: 0}}]}
+      assert value.template ==
+               {:make_map, nil, [{{:literal, :foo}, %LiveData.Tracked.FragmentTree.Slot{num: 0}}]}
+
       assert value.slots == [:yay]
     end
 
     test "function clause matching" do
-      module = define_module! do
-        use LiveData.Tracked
+      module =
+        define_module! do
+          use LiveData.Tracked
 
-        deft testing({:one, val}) do
-          {:foo, val}
+          deft testing({:one, val}) do
+            {:foo, val}
+          end
+
+          deft testing({:two, val}) do
+            {:bar, val}
+          end
         end
-        deft testing({:two, val}) do
-          {:bar, val}
-        end
-      end
 
       ret = module.__tracked__testing__({:one, 5})
-      assert ret.template == {:make_tuple,
-        [{:literal, :foo}, %LiveData.Tracked.FragmentTree.Slot{num: 0}]}
+
+      assert ret.template ==
+               {:make_tuple, [{:literal, :foo}, %LiveData.Tracked.FragmentTree.Slot{num: 0}]}
+
       assert ret.slots == [5]
 
       ret = module.__tracked__testing__({:two, 6})
-      assert ret.template == {:make_tuple,
-        [{:literal, :bar}, %LiveData.Tracked.FragmentTree.Slot{num: 0}]}
+
+      assert ret.template ==
+               {:make_tuple, [{:literal, :bar}, %LiveData.Tracked.FragmentTree.Slot{num: 0}]}
+
       assert ret.slots == [6]
     end
-
   end
 
   describe "anonymous function" do
-
     test "in deft" do
-      _module = define_module! do
-        use LiveData.Tracked
-        deft testing(v) do
-          fun = fn i -> i.o end
-          fun.(v)
-        end
-      end
-    end
+      _module =
+        define_module! do
+          use LiveData.Tracked
 
+          deft testing(v) do
+            fun = fn i -> i.o end
+            fun.(v)
+          end
+        end
+    end
   end
 
   describe "list comprehensions" do
-
     test "in deft" do
-      _module = define_module! do
-        use LiveData.Tracked
-        deft testing(v) do
-          for a <- v.v do
-            {1, a}
-          end
-        end
-      end
-    end
+      _module =
+        define_module! do
+          use LiveData.Tracked
 
-    test "explicitly nested in deft" do
-      module = define_module! do
-        use LiveData.Tracked
-        deft testing(v) do
-          for a <- v.v do
-            for b <- a.v do
-              {1, b}
+          deft testing(v) do
+            for a <- v.v do
+              {1, a}
             end
           end
         end
-      end
+    end
+
+    test "explicitly nested in deft" do
+      module =
+        define_module! do
+          use LiveData.Tracked
+
+          deft testing(v) do
+            for a <- v.v do
+              for b <- a.v do
+                {1, b}
+              end
+            end
+          end
+        end
 
       assigns = %{
         v: [
@@ -182,14 +248,16 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
     end
 
     test "implicitly nested in deft" do
-      module = define_module! do
-        use LiveData.Tracked
-        deft testing(v) do
-          for a <- v.v, b <- a.v do
-            {1, b}
+      module =
+        define_module! do
+          use LiveData.Tracked
+
+          deft testing(v) do
+            for a <- v.v, b <- a.v do
+              {1, b}
+            end
           end
         end
-      end
 
       assigns = %{
         v: [
@@ -200,7 +268,6 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
 
       module.__tracked__testing__(assigns)
     end
-
   end
 
   test "anonymous function with literal return value" do
@@ -216,5 +283,4 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
       end
     end
   end
-
 end

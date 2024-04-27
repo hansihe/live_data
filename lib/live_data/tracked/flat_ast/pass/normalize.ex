@@ -45,9 +45,11 @@ defmodule LiveData.Tracked.FlatAst.Pass.Normalize do
     {_last_item, block_items, ast} = flatten_block_rec(expr_id, ast)
     block_items = FlatAst.Util.recursive_flatten(block_items)
 
+    location = FlatAst.get_location(ast, expr_id)
+
     # TODO filter useless
 
-    {expr_id, ast} = FlatAst.add_expr(ast, Expr.Scope.new(block_items))
+    {expr_id, ast} = FlatAst.add_expr(ast, Expr.Scope.new(block_items, location))
     {expr_id, ast}
   end
 

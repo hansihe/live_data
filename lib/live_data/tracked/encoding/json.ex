@@ -7,7 +7,7 @@ defmodule LiveData.Tracked.Encoding.JSON do
   @op_set_fragment_root_template 2
   @op_patch_fragment 3
   @op_set_template 4
-  #@op_reset 5
+  # @op_reset 5
 
   def new do
     %{
@@ -65,7 +65,9 @@ defmodule LiveData.Tracked.Encoding.JSON do
   end
 
   def escape_fragment(%FragmentTree.Template{} = template, state) do
-    {id, state} = Map.get_and_update!(state, :template_aliases, &Aliases.alias_for(template.id, &1))
+    {id, state} =
+      Map.get_and_update!(state, :template_aliases, &Aliases.alias_for(template.id, &1))
+
     {escaped_slots, state} = Enum.map_reduce(template.slots, state, &escape_fragment(&1, &2))
     out = ["$t", id | escaped_slots]
     {out, state}
@@ -104,10 +106,11 @@ defmodule LiveData.Tracked.Encoding.JSON do
   end
 
   def escape_template({:make_map, nil, kvs}, state) do
-    all_keys_literal = Enum.all?(kvs, fn
-      {{:literal, _lit}, _val} -> true
-      _ -> false
-    end)
+    all_keys_literal =
+      Enum.all?(kvs, fn
+        {{:literal, _lit}, _val} -> true
+        _ -> false
+      end)
 
     if all_keys_literal do
       {kvs_list, state} =
@@ -135,6 +138,7 @@ defmodule LiveData.Tracked.Encoding.JSON do
 
     {[head_esc | tail_esc], state}
   end
+
   def escape_template([], state) do
     {[], state}
   end
@@ -143,7 +147,7 @@ defmodule LiveData.Tracked.Encoding.JSON do
     {lit, state}
   end
 
-  #def read(ops) do
+  # def read(ops) do
   #  Enum.map(ops, fn
   #    [@op_render, frag_id] ->
   #      {:render, frag_id}
@@ -165,40 +169,39 @@ defmodule LiveData.Tracked.Encoding.JSON do
   #      unescaped = unescape_template(escaped)
   #      {:set_template, temp_id, unescaped}
   #  end)
-  #end
+  # end
 
-  #def unescape_fragment(["$t", id | slots]) do
+  # def unescape_fragment(["$t", id | slots]) do
   #  IO.inspect slots, label: :slots
   #  %Tree.Template{
   #    id: id,
   #    slots: Enum.map(slots, &unescape_fragment/1)
   #  }
-  #end
-  #def unescape_fragment(["$r", id]) do
+  # end
+  # def unescape_fragment(["$r", id]) do
   #  %Tree.Ref{id: id}
-  #end
+  # end
   ## TODO remove when complete
-  #def unescape_fragment(num) when is_number(num) do
+  # def unescape_fragment(num) when is_number(num) do
   #  num
-  #end
-  #def unescape_fragment(atom) when is_atom(atom) do
+  # end
+  # def unescape_fragment(atom) when is_atom(atom) do
   #  atom
-  #end
+  # end
 
-  #def unescape_template(["$s", slot_num]) do
+  # def unescape_template(["$s", slot_num]) do
   #  %Tree.Slot{num: slot_num}
-  #end
-  #def unescape_template(map) when is_map(map) do
+  # end
+  # def unescape_template(map) when is_map(map) do
   #  kvs = Enum.map(map, fn {key, value} ->
   #    [unescape_template(key), unescape_template(value)]
   #  end)
   #  {:make_map, nil, kvs}
-  #end
-  #def unescape_template([]) do
+  # end
+  # def unescape_template([]) do
   #  {:literal, []}
-  #end
-  #def unescape_template(val) when is_atom(val) do
+  # end
+  # def unescape_template(val) when is_atom(val) do
   #  {:literal, val}
-  #end
-
+  # end
 end

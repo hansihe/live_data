@@ -14,7 +14,6 @@ defmodule Expr.MakeTuple do
 end
 
 defimpl Expr, for: Expr.MakeTuple do
-
   def transform(%Expr.MakeTuple{} = expr, acc, fun) do
     {new_elems, acc} =
       expr.elements
@@ -23,8 +22,11 @@ defimpl Expr, for: Expr.MakeTuple do
         fun.(:value, idx, elem, acc)
       end)
 
-    new_expr = %{ expr | elements: new_elems }
+    new_expr = %{expr | elements: new_elems}
     {new_expr, acc}
   end
 
+  def location(%Expr.MakeTuple{location: loc}) do
+    loc
+  end
 end

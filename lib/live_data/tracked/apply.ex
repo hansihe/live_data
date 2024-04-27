@@ -96,5 +96,4 @@ defmodule LiveData.Tracked.Apply do
       Map.put(map, key_o, val_o)
     end)
   end
-
 end

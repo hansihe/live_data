@@ -16,7 +16,6 @@ defmodule Expr.MakeBinary do
 end
 
 defimpl Expr, for: Expr.MakeBinary do
-
   def transform(%Expr.MakeBinary{} = expr, acc, fun) do
     # TODO size specifier
     {new_components, acc} =
@@ -26,8 +25,12 @@ defimpl Expr, for: Expr.MakeBinary do
         {new_elem, acc} = fun.(:value, idx, elem, acc)
         {{new_elem, specifiers}, acc}
       end)
+
     new_expr = %{expr | components: new_components}
     {new_expr, acc}
   end
 
+  def location(%Expr.MakeBinary{location: loc}) do
+    loc
+  end
 end

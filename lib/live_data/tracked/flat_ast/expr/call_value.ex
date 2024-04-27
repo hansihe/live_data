@@ -13,7 +13,6 @@ defmodule Expr.CallValue do
 end
 
 defimpl Expr, for: Expr.CallValue do
-
   def transform(%Expr.CallValue{} = expr, acc, fun) do
     {new_value, acc} = fun.(:value, :fun, expr.value, acc)
 
@@ -25,12 +24,15 @@ defimpl Expr, for: Expr.CallValue do
       end)
 
     new_expr = %{
-      expr |
-      value: new_value,
-      args: new_args
+      expr
+      | value: new_value,
+        args: new_args
     }
 
     {new_expr, acc}
   end
 
+  def location(%Expr.CallValue{location: loc}) do
+    loc
+  end
 end

@@ -17,7 +17,6 @@ defmodule LiveData.Tracked.FlatAst.Expr.MakeCons do
 end
 
 defimpl Expr, for: Expr.MakeCons do
-
   def transform(%Expr.MakeCons{} = expr, acc, fun) do
     {new_head, acc} = fun.(:value, :head, expr.head, acc)
     {new_tail, acc} = fun.(:value, :tail, expr.tail, acc)
@@ -26,4 +25,7 @@ defimpl Expr, for: Expr.MakeCons do
     {new_expr, acc}
   end
 
+  def location(%Expr.MakeCons{location: loc}) do
+    loc
+  end
 end

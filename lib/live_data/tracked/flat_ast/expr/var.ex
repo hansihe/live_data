@@ -14,7 +14,6 @@ defmodule Expr.Var do
 end
 
 defimpl Expr, for: Expr.Var do
-
   def transform(%Expr.Var{} = expr, acc, fun) do
     {new_ref_expr, acc} =
       case expr.ref_expr do
@@ -26,4 +25,7 @@ defimpl Expr, for: Expr.Var do
     {new_expr, acc}
   end
 
+  def location(%Expr.Var{location: loc}) do
+    loc
+  end
 end

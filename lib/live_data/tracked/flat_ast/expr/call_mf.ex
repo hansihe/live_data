@@ -20,7 +20,6 @@ defmodule LiveData.Tracked.FlatAst.Expr.CallMF do
 end
 
 defimpl Expr, for: Expr.CallMF do
-
   def transform(%Expr.CallMF{} = expr, acc, fun) do
     {new_module, acc} =
       if expr.module do
@@ -39,13 +38,16 @@ defimpl Expr, for: Expr.CallMF do
       end)
 
     new_expr = %{
-      expr |
-      module: new_module,
-      function: new_function,
-      args: new_args
+      expr
+      | module: new_module,
+        function: new_function,
+        args: new_args
     }
 
     {new_expr, acc}
   end
 
+  def location(%Expr.CallMF{location: loc}) do
+    loc
+  end
 end

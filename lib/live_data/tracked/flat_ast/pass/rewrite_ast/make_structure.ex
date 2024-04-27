@@ -11,15 +11,29 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
 
   alias LiveData.Tracked.FlatAst
   alias LiveData.Tracked.FlatAst.Expr
+  alias LiveData.Tracked.FlatAst.Pass.RewriteAst
   alias LiveData.Tracked.FlatAst.Pass.RewriteAst.StaticsAgent
   alias LiveData.Tracked.FragmentTree.Slot
 
-  def rewrite_make_structure(expr_id, ast, state) do
+  def rewrite_make_structure(expr_id, file, ast, state) do
     if StaticsAgent.fetch(state, expr_id) != :error do
       expr_id
     else
       :ok = StaticsAgent.add(state, expr_id)
-      static_structure = rewrite_make_structure_rec(expr_id, ast, expr_id, state)
+      static_structure =
+        rewrite_make_structure_rec(expr_id, file, ast, expr_id, state)
+        |> RewriteAst.SimplifyStructure.simplify_structure()
+
+      #location = FlatAst.get_location(ast, expr_id)
+      #foo = %{
+      #  severity: :warning,
+      #  message: "Test diagnostic",
+      #  stacktrace: [],
+      #  position: location,
+      #  span: nil,
+      #  file: file
+      #}
+      #:elixir_errors.print_diagnostic(foo, true)
 
       {:ok, static_result} = StaticsAgent.fetch(state, expr_id)
 
@@ -40,28 +54,29 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
     end
   end
 
-  def rewrite_make_structure_rec(expr_id, ast, static_id, state) do
+  def rewrite_make_structure_rec(expr_id, file, ast, static_id, state) do
     expr = FlatAst.get(ast, expr_id)
-    rewrite_make_structure_rec(expr, expr_id, ast, static_id, state)
+    rewrite_make_structure_rec(expr, expr_id, file, ast, static_id, state)
   end
 
-  def rewrite_make_structure_rec(%Expr.Scope{exprs: exprs}, _expr_id, ast, static_id, state) do
+  def rewrite_make_structure_rec(%Expr.Scope{exprs: exprs}, _expr_id, file, ast, static_id, state) do
     result_expr = List.last(exprs)
-    rewrite_make_structure_rec(result_expr, ast, static_id, state)
+    rewrite_make_structure_rec(result_expr, file, ast, static_id, state)
   end
 
-  def rewrite_make_structure_rec(%Expr.Case{} = expr, expr_id, ast, static_id, state) do
+  def rewrite_make_structure_rec(%Expr.Case{} = expr, expr_id, file, ast, static_id, state) do
     :ok = StaticsAgent.add_dependencies(state, ast, [expr.value])
 
     for clause <- expr.clauses do
-      _inner_expr = rewrite_make_structure(clause.body, ast, state)
+      _inner_expr = rewrite_make_structure(clause.body, file, ast, state)
     end
+
     :ok = StaticsAgent.add_traversed(state, expr_id)
 
     StaticsAgent.add_slot(state, static_id, expr_id)
   end
 
-  def rewrite_make_structure_rec(%Expr.For{} = expr, expr_id, ast, static_id, state) do
+  def rewrite_make_structure_rec(%Expr.For{} = expr, expr_id, file, ast, static_id, state) do
     items =
       Enum.map(expr.items, fn
         {:loop, _pattern, _binds, expr} -> expr
@@ -70,23 +85,33 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
 
     :ok = StaticsAgent.add_dependencies(state, ast, [expr.into | items])
 
-    _inner_expr = rewrite_make_structure(expr.inner, ast, state)
+    _inner_expr = rewrite_make_structure(expr.inner, file, ast, state)
     :ok = StaticsAgent.add_traversed(state, expr_id)
 
     StaticsAgent.add_slot(state, static_id, expr_id)
   end
 
-  def rewrite_make_structure_rec(%Expr.CallTracked{}, expr_id, ast, static_id, state) do
+  #def rewrite_make_structure_rec(%Expr.LifecycleHook{} = expr, expr_id, file, ast, static_id, state) do
+  #  #:ok = StaticsAgent.add_dependencies(state, ast, expr.arguments)
+  #
+  #  for subtree <- expr.subtrees do
+  #    _inner_expr = rewrite_make_structure(subtree, file, ast, state)
+  #  end
+
+  #  :ok = StaticsAgent.add_traversed(state, )
+  #end
+
+  def rewrite_make_structure_rec(%Expr.CallTracked{}, expr_id, _file, ast, static_id, state) do
     :ok = StaticsAgent.add_dependencies(state, ast, [expr_id])
     StaticsAgent.add_slot(state, static_id, expr_id)
   end
 
-  def rewrite_make_structure_rec(%Expr.CallMF{module: nil}, expr_id, ast, static_id, state) do
+  def rewrite_make_structure_rec(%Expr.CallMF{module: nil}, expr_id, _file, ast, static_id, state) do
     :ok = StaticsAgent.add_dependencies(state, ast, [expr_id])
     StaticsAgent.add_slot(state, static_id, expr_id)
   end
 
-  def rewrite_make_structure_rec(%Expr.CallMF{} = expr, expr_id, ast, static_id, state) do
+  def rewrite_make_structure_rec(%Expr.CallMF{} = expr, expr_id, file, ast, static_id, state) do
     case {FlatAst.get(ast, expr.module), FlatAst.get(ast, expr.function)} do
       {{:literal_value, LiveData.Tracked.Dummy}, {:literal_value, :keyed_stub}} ->
         [key_expr, value_expr] = expr.args
@@ -94,7 +119,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
         :ok = StaticsAgent.add_dependencies(state, ast, [key_expr])
         :ok = StaticsAgent.set_key(state, static_id, key_expr)
 
-        rewrite_make_structure_rec(value_expr, ast, static_id, state)
+        rewrite_make_structure_rec(value_expr, file, ast, static_id, state)
 
       {{:literal_value, LiveData.Tracked.Dummy}, {:literal_value, :track_stub}} ->
         # This case should have been rewritten to `Expr.CallTracked` in a previous pass.
@@ -103,12 +128,12 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
       {{:literal_value, LiveData.Tracked.Dummy}, {:literal_value, :custom_fragment_stub}} ->
         [_custom_fragment_id] = expr.args
         # TODO: Reference the custom fragment
-        throw "todo"
+        throw("todo")
 
       {{:literal_value, LiveData.Tracked.Dummy}, {:literal_value, :lifecycle_hook_stub}} ->
         [_hook_module, _subtrees] = expr.args
         # TODO: Reference the hook
-        throw "todo"
+        throw("todo")
 
       _ ->
         :ok = StaticsAgent.add_dependencies(state, ast, [expr_id])
@@ -116,11 +141,18 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
     end
   end
 
-  def rewrite_make_structure_rec(%Expr.MakeMap{struct: nil, prev: nil} = expr, _expr_id, ast, static_id, state) do
+  def rewrite_make_structure_rec(
+        %Expr.MakeMap{struct: nil, prev: nil} = expr,
+        _expr_id,
+        file,
+        ast,
+        static_id,
+        state
+      ) do
     kvs_static =
       Enum.map(expr.kvs, fn {key, val} ->
-        key_rewrite = rewrite_make_structure_rec(key, ast, static_id, state)
-        val_rewrite = rewrite_make_structure_rec(val, ast, static_id, state)
+        key_rewrite = rewrite_make_structure_rec(key, file, ast, static_id, state)
+        val_rewrite = rewrite_make_structure_rec(val, file, ast, static_id, state)
 
         {key_rewrite, val_rewrite}
       end)
@@ -128,34 +160,48 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
     {:make_map, nil, kvs_static}
   end
 
-  def rewrite_make_structure_rec(%Expr.MakeTuple{elements: elems}, _expr_id, ast, static_id, state) do
-    elems_static = Enum.map(elems, &rewrite_make_structure_rec(
-          &1, ast, static_id, state))
+  def rewrite_make_structure_rec(
+        %Expr.MakeTuple{elements: elems},
+        _expr_id,
+        file,
+        ast,
+        static_id,
+        state
+      ) do
+    elems_static =
+      Enum.map(
+        elems,
+        &rewrite_make_structure_rec(
+          &1,
+          file,
+          ast,
+          static_id,
+          state
+        )
+      )
 
     {:make_tuple, elems_static}
   end
 
-  def rewrite_make_structure_rec({:literal_value, lit}, _expr_id, _ast, _static_id, _state) do
-    {:literal, lit}
-  end
-
-  def rewrite_make_structure_rec(%Expr.MakeCons{} = expr, _expr_id, ast, static_id, state) do
-    head_rewrite = rewrite_make_structure_rec(expr.head, ast, static_id, state)
-    tail_rewrite = rewrite_make_structure_rec(expr.tail, ast, static_id, state)
+  def rewrite_make_structure_rec(%Expr.MakeCons{} = expr, _expr_id, file, ast, static_id, state) do
+    head_rewrite = rewrite_make_structure_rec(expr.head, file, ast, static_id, state)
+    tail_rewrite = rewrite_make_structure_rec(expr.tail, file, ast, static_id, state)
 
     [head_rewrite | tail_rewrite]
   end
 
-  def rewrite_make_structure_rec(%Expr.MakeBinary{} = expr, expr_id, ast, static_id, state) do
+  def rewrite_make_structure_rec(%Expr.MakeBinary{} = expr, expr_id, file, ast, static_id, state) do
     if Enum.all?(expr.components, fn
-      {_expr, {:binary, _, _}} -> true
-      _ -> false
-    end) do
+         {_expr, {:binary, _, _}} -> true
+         _ -> false
+       end) do
       # Only :binary specifiers! We can discard them and convert into a :make_binary
       # template operation which simply performs concatenation.
-      elems_static = Enum.map(expr.components, fn {expr, _specifier} ->
-        rewrite_make_structure_rec(expr, ast, static_id, state)
-      end)
+      elems_static =
+        Enum.map(expr.components, fn {expr, _specifier} ->
+          rewrite_make_structure_rec(expr, file, ast, static_id, state)
+        end)
+
       {:make_binary, elems_static}
     else
       # If we have non-:binary specifiers, we fall back to binary in slot.
@@ -164,7 +210,22 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
     end
   end
 
-  def rewrite_make_structure_rec(_expr, expr_id, ast, static_id, state) do
+  def rewrite_make_structure_rec(
+        %Expr.Intrinsic{type: :to_string, args: [inner]},
+        _expr_id,
+        file,
+        ast,
+        static_id,
+        state
+      ) do
+    {:to_string, rewrite_make_structure_rec(inner, file, ast, static_id, state)}
+  end
+
+  def rewrite_make_structure_rec({:literal_value, lit}, _expr_id, _file, _ast, _static_id, _state) do
+    {:literal, lit}
+  end
+
+  def rewrite_make_structure_rec(_expr, expr_id, _file, ast, static_id, state) do
     :ok = StaticsAgent.add_dependencies(state, ast, [expr_id])
     StaticsAgent.add_slot(state, static_id, expr_id)
   end

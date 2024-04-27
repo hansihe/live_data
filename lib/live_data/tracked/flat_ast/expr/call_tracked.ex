@@ -11,11 +11,13 @@ defmodule Expr.CallTracked do
 end
 
 defimpl Expr, for: Expr.CallTracked do
-
   def transform(%Expr.CallTracked{} = expr, acc, fun) do
     # Behaves as if CallMF in normal circumstances
     {inner, acc} = Expr.transform(expr.inner, acc, fun)
     {%{expr | inner: inner}, acc}
   end
 
+  def location(%Expr.CallTracked{}) do
+    nil
+  end
 end

@@ -387,3 +387,13 @@ dist
 # End of https://www.toptal.com/developers/gitignore/api/elixir,phoenix,node,flutter,dart,intellij
 
 .tool-versions
+
+# Devenv
+.devenv*
+devenv.local.nix
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml

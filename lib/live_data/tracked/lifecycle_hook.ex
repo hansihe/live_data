@@ -15,5 +15,4 @@ defmodule LiveData.Tracked.LifecycleHook do
   @callback on_enter(subtrees(), socket()) :: {rendered(), state(), socket()}
   @callback on_update(subtrees(), state(), socket()) :: {rendered(), state(), socket()}
   @callback on_exit(state(), socket()) :: {state(), socket()}
-
 end
