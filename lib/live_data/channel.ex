@@ -8,7 +8,7 @@ defmodule LiveData.Channel do
   require Logger
 
   alias Phoenix.Socket.Message
-  alias LiveData.Socket
+  alias LiveData.{Socket, Async}
   alias LiveData.Tracked.RenderDiff
   alias LiveData.Tracked.Encoding
 
@@ -68,6 +68,14 @@ defmodule LiveData.Channel do
 
   def handle_info(%Message{event: "e", payload: %{"d" => data}}, state) do
     {:ok, socket} = state.view.handle_event(data, state.socket)
+    state = %{state | socket: socket}
+    state = render_view(state)
+    {:noreply, state}
+  end
+
+  def handle_info({@prefix, :async_result, {kind, info}}, state) do
+    {ref, _cid, keys, result} = info
+    socket = Async.handle_async(state.socket, nil, kind, keys, ref, result)
     state = %{state | socket: socket}
     state = render_view(state)
     {:noreply, state}
@@ -161,6 +169,11 @@ defmodule LiveData.Channel do
     else
       state
     end
+  end
+
+  def report_async_result(monitor_ref, kind, ref, cid, keys, result)
+      when is_reference(monitor_ref) and kind in [:assign, :start] and is_reference(ref) do
+    send(monitor_ref, {@prefix, :async_result, {kind, {ref, cid, keys, result}}})
   end
 
   defp push(state, event, payload) do
