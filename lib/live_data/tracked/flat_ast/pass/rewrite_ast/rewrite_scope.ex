@@ -68,9 +68,10 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
         new_slots =
           Enum.map(slots, fn
             {:bind, _bid} = bind ->
-              data = FlatAst.get_bind_data(data.ast, bind)
-              new_expr = Map.get(rewritten, data.expr) || Map.fetch!(transcribed, data.expr)
-              PDAst.add_bind(out, new_expr, data.selector, data.variable)
+              #data = FlatAst.get_bind_data(data.ast, bind)
+              #new_expr = Map.get(rewritten, data.expr) || Map.fetch!(transcribed, data.expr)
+              #PDAst.add_bind(out, new_expr, data.selector, data.variable)
+              Map.get(rewritten, bind) || Map.fetch!(transcribed, bind)
 
             {:expr, _eid} = expr_id ->
               Map.get(rewritten, expr_id) || Map.fetch!(transcribed, expr_id)
@@ -89,11 +90,13 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
   end
 
   def rewrite_scope_expr(expr, expr_id, data, rewritten, transcribed, out) do
+    IO.inspect(expr, label: :rewrite_scope_expr)
     new_expr_id = PDAst.add_expr(out)
     rewritten = Map.put(rewritten, expr_id, new_expr_id)
 
     {new_expr, rewritten} =
       Util.transform_expr(expr, rewritten, fn kind, selector, inner, _aux, rewritten ->
+        IO.inspect({expr, kind, selector}, label: :rewrite_expr)
         case {expr, kind, selector} do
           {%Expr.For{}, :scope, :inner} ->
             {new_inner, _rewritten} = rewrite_scope(inner, data, rewritten, transcribed, out)
@@ -150,13 +153,15 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
     {new_expr_id, rewritten}
   end
 
-  def rewrite_resolve({:bind, _bid} = bind, data, rewritten, transcribed, out) do
-    data = FlatAst.get_bind_data(data.ast, bind)
+  def rewrite_resolve({:bind, _bid} = bind, _data, rewritten, transcribed, _out) do
+    #data = FlatAst.get_bind_data(data.ast, bind)
 
-    new_expr =
-      {:expr, _new_eid} = Map.get(rewritten, data.expr) || Map.fetch!(transcribed, data.expr)
+    #new_expr =
+    #  {:expr, _new_eid} = Map.get(rewritten, data.expr) || Map.fetch!(transcribed, data.expr)
 
-    PDAst.add_bind(out, new_expr, data.selector, data.variable)
+    #PDAst.add_bind(out, new_expr, data.selector, data.variable)
+
+    Map.get(rewritten, bind) || Map.fetch!(transcribed, bind)
   end
 
   def rewrite_resolve({:expr, _eid} = expr_id, _data, rewritten, transcribed, _out) do

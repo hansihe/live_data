@@ -5,7 +5,7 @@ defmodule LiveData.Tracked.LiveViewTest do
 
   test "with liveview heex template" do
     module =
-      define_module! do
+      define_module! print_trace: true do
         use LiveData.Tracked
 
         import LiveData.Tracked.TestHelpers, only: [sigil_H: 2]

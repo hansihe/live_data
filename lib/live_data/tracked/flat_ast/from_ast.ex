@@ -69,53 +69,65 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     {:ok, ast}
   end
 
-  def from_pattern(tup, binds, scope, out) when is_tuple(tup) and tuple_size(tup) != 3 do
+  def from_pattern(tup, bind_map, scope, add_bind, out) when is_tuple(tup) and tuple_size(tup) != 3 do
     tup_list = Tuple.to_list(tup)
 
-    {elems, binds} =
-      Enum.map_reduce(tup_list, binds, fn elem, binds ->
-        {binds, pattern_id} = from_pattern(elem, binds, scope, out)
-        {pattern_id, binds}
+    {elems, bind_map} =
+      Enum.map_reduce(tup_list, bind_map, fn elem, bind_map ->
+        {_pattern_id, _bind_map} = from_pattern(elem, bind_map, scope, add_bind, out)
       end)
 
     pattern_id = PDAst.add_pattern(out, {:tuple, elems})
 
-    {binds, pattern_id}
+    {pattern_id, bind_map}
   end
 
-  def from_pattern(name, binds, _scope, out) when is_atom(name) do
+  def from_pattern(name, bind_map, _scope, _add_bind, out) when is_atom(name) do
     pattern_id = PDAst.add_pattern(out, {:literal, name})
-    {binds, pattern_id}
+    {pattern_id, bind_map}
   end
 
-  def from_pattern(number, binds, _scope, out) when is_number(number) do
+  def from_pattern(number, bind_map, _scope, _add_bind, out) when is_number(number) do
     pattern_id = PDAst.add_pattern(out, {:literal, number})
-    {binds, pattern_id}
+    {pattern_id, bind_map}
   end
 
-  def from_pattern({name, _opts, ctx} = var, binds, _scope, out)
+  def from_pattern({name, _opts, ctx} = var, bind_map, _scope, add_bind, out)
       when is_atom(name) and is_atom(ctx) do
-    processed = process_var(var)
-    pattern_id = PDAst.add_pattern(out, {:bind, processed})
-    {[processed | binds], pattern_id}
+    proc_var = process_var(var)
+
+    bind_id =
+      case Map.fetch(bind_map, proc_var) do
+        {:ok, bind} ->
+          bind
+
+        :error ->
+          add_bind.(proc_var)
+      end
+
+    bind_map = Map.put(bind_map, proc_var, bind_id)
+
+    pattern_id = PDAst.add_pattern(out, {:bind, bind_id})
+
+    {pattern_id, bind_map}
   end
 
-  def from_pattern({:=, _opts, [lhs, rhs]}, binds, scope, out) do
-    {binds, lhs_pat} = from_pattern(lhs, binds, scope, out)
-    {binds, rhs_pat} = from_pattern(rhs, binds, scope, out)
+  def from_pattern({:=, _opts, [lhs, rhs]}, bind_map, scope, add_bind, out) do
+    {lhs_pat, bind_map} = from_pattern(lhs, bind_map, scope, add_bind, out)
+    {rhs_pat, bind_map} = from_pattern(rhs, bind_map, scope, add_bind, out)
     pattern_id = PDAst.add_pattern(out, {:union, lhs_pat, rhs_pat})
-    {binds, pattern_id}
+    {pattern_id, bind_map}
   end
 
-  def from_pattern({:%{}, _opts, fields}, binds, scope, out) when is_list(fields) do
-    {elems, binds} =
-      Enum.map_reduce(fields, binds, fn {key, value}, binds ->
-        {binds, pattern_id} = from_pattern(value, binds, scope, out)
-        {{key, pattern_id}, binds}
+  def from_pattern({:%{}, _opts, fields}, bind_map, scope, add_bind, out) when is_list(fields) do
+    {elems, bind_map} =
+      Enum.map_reduce(fields, bind_map, fn {key, value}, bind_map ->
+        {pattern_id, bind_map} = from_pattern(value, bind_map, scope, add_bind, out)
+        {{key, pattern_id}, bind_map}
       end)
 
     pattern_id = PDAst.add_pattern(out, {:map, elems})
-    {binds, pattern_id}
+    {pattern_id, bind_map}
   end
 
   def from_expr({:__block__, opts, body}, scope, out) do
@@ -575,26 +587,26 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
 
   # Pattern stuff
 
-  def handle_patterns(patterns, scope, out) do
-    args_pats = Enum.map(patterns, &from_pattern(&1, [], scope, out))
-    patterns = Enum.map(args_pats, fn {_binds, pat} -> pat end)
+  def handle_patterns(patterns, scope, add_bind, out) do
+    {patterns, var_to_bind_map} = Enum.map_reduce(patterns, %{}, fn pattern_ast, var_to_bind_map ->
+      from_pattern(pattern_ast, var_to_bind_map, scope, add_bind, out)
+    end)
 
-    binds_vars =
-      args_pats
-      |> Enum.map(fn {binds, _pat} -> binds end)
-      |> Enum.concat()
-
-    {binds_vars, patterns}
+    {var_to_bind_map, patterns}
   end
 
   def handle_patterns_scope(patterns, within_expr_id, selector, scope, out) do
-    {binds_vars, patterns} = handle_patterns(patterns, scope, out)
+    add_bind = fn var ->
+      PDAst.add_bind(out, within_expr_id, selector, var)
+    end
 
-    {scope, binds_set} =
-      Enum.reduce(binds_vars, {scope, MapSet.new()}, fn var, {scope, binds_set} ->
-        bind = PDAst.add_bind(out, within_expr_id, selector, var)
-        {Map.put(scope, var, bind), MapSet.put(binds_set, bind)}
-      end)
+    {var_to_bind_map, patterns} = handle_patterns(patterns, scope, add_bind, out)
+
+    binds_set = MapSet.new(var_to_bind_map, fn {_var, bind} -> bind end)
+
+    scope = Enum.reduce(var_to_bind_map, scope, fn {var, bind}, scope ->
+      Map.put(scope, var, bind)
+    end)
 
     {binds_set, patterns, scope}
   end

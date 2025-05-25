@@ -6,11 +6,10 @@ defmodule LiveData.Tracked.SmartEngineWrapper do
   def handle_begin(state), do: EEx.SmartEngine.handle_begin(state)
   def handle_body(state, _opts \\ []) do
     body_ast = EEx.SmartEngine.handle_body(state)
-    #quote do
-    #  unquote(body_ast)
-    #  #LiveData.Tracked.Dummy.marker_stub(:html, outer_body)
-    #end
-    body_ast
+    quote do
+      outer_body = unquote(body_ast)
+      LiveData.Tracked.Dummy.marker_stub(:html, outer_body)
+    end
   end
   def handle_end(state), do: EEx.SmartEngine.handle_end(state)
   def handle_expr(state, marker, expr), do: EEx.SmartEngine.handle_expr(state, marker, expr)

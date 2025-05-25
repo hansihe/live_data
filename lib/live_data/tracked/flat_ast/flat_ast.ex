@@ -96,7 +96,11 @@ alias LiveData.Tracked.FlatAst.Expr
   end
 
   @doc """
-  Adds a bint which targets `to` with selector `selector`.
+  Adds a bind which targets `to` with selector `selector`.
+
+  `selector` is the selector for the specific pattern of the expression.
+  This is relevant for expressions like `case` which have multiple patterns.
+  For trivial expressions (like `Match`), `selector` can be `nil`.
   """
   def add_bind(ast, {:expr, _eid} = to, selector, variable) do
     data = %{

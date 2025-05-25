@@ -18,6 +18,15 @@ defmodule LiveData.Tracked.FlatAst.Pass.Normalize do
   def normalize(ast) do
     %Expr.Fn{} = expr = FlatAst.get(ast, ast.root)
 
+    # Identity binds are binds to patterns where the bind is equal
+    # to the root value being matched on.
+    # For identity binds, we lift them to the original value, as
+    # this can simplify logic in other passes.
+    # Note that the pattern may very well contain other binds or
+    # restrict the value. This does not matter as the original pattern
+    # will still be matched on.
+
+
     {new_clauses, ast} =
       Enum.map_reduce(expr.clauses, ast, fn %Expr.Fn.Clause{} = clause, ast ->
         {new_guard, ast} =
@@ -113,4 +122,10 @@ defmodule LiveData.Tracked.FlatAst.Pass.Normalize do
 
     {expr_id, [exprs, expr_id], ast}
   end
+
+  #defp collect_identity_binds(pat_id, ast, acc) do
+  #  case FlatAst.get(pat_id) do
+  #    {:bind, bind_var}
+  #  end
+  #end
 end

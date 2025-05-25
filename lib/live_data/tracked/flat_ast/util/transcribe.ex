@@ -77,7 +77,8 @@ defmodule LiveData.Tracked.FlatAst.Util.Transcribe do
           {new_ref, map}
 
         :bind_ref, _selector, {:bind, _bid} = bind, _aux, map ->
-          new_ref = transcribe_bind(bind, map, backup_resolve, data, out)
+          #new_ref = transcribe_bind(bind, map, backup_resolve, data, out)
+          new_ref = Map.fetch!(map, bind)
           {new_ref, map}
       end)
 
@@ -93,7 +94,8 @@ defmodule LiveData.Tracked.FlatAst.Util.Transcribe do
         new_expr_id
 
       {:bind, _bid} = bind ->
-        transcribe_bind(bind, map, backup_resolve, data, out)
+        Map.fetch!(map, bind)
+        #transcribe_bind(bind, map, backup_resolve, data, out)
 
       {:literal_value, _, lit} ->
         PDAst.add_literal(out, lit)

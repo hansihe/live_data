@@ -63,12 +63,12 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
             to_pattern(pattern_id, gen, ast, opts)
           end)
 
-        gen =
-          Enum.reduce(clause.binds, gen, fn bind, gen ->
-            data = FlatAst.get_bind_data(ast, bind)
-            # TODO decollide?
-            Map.put(gen, bind, data.variable)
-          end)
+        #gen =
+        #  Enum.reduce(clause.binds, gen, fn bind, gen ->
+        #    data = FlatAst.get_bind_data(ast, bind)
+        #    # TODO decollide?
+        #    Map.put(gen, bind, data.variable)
+        #  end)
 
         {patterns_ast, gen} = if clause.guard == nil do
           {patterns_ast, gen}
@@ -462,7 +462,9 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     {{:=, make_opts(), [lhs_ast, rhs_ast]}, gen}
   end
 
-  def to_pattern_inner({:bind, var}, _pattern_id, gen, _ast, _opts) do
+  def to_pattern_inner({:bind, bind_id}, _pattern_id, gen, _ast, opts) do
+    var = make_unique_var(opts)
+    gen = Map.put(gen, bind_id, var)
     {var_to_expr(var, gen), gen}
   end
 
