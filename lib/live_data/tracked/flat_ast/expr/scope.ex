@@ -31,7 +31,7 @@ defimpl Expr, for: Expr.Scope do
       exprs
       |> Enum.with_index()
       |> Enum.map_reduce(acc, fn {expr, idx}, acc ->
-        fun.(:value, {idx, idx == num_items - 1}, expr, acc)
+        fun.(:value, {idx, idx == num_items - 1}, expr, nil, acc)
       end)
 
     new_expr = %{expr | exprs: new_exprs}

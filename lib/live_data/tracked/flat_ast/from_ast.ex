@@ -84,7 +84,12 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
   end
 
   def from_pattern(name, binds, _scope, out) when is_atom(name) do
-    pattern_id = PDAst.add_pattern(out, {:atom, name})
+    pattern_id = PDAst.add_pattern(out, {:literal, name})
+    {binds, pattern_id}
+  end
+
+  def from_pattern(number, binds, _scope, out) when is_number(number) do
+    pattern_id = PDAst.add_pattern(out, {:literal, number})
     {binds, pattern_id}
   end
 
@@ -93,6 +98,24 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
     processed = process_var(var)
     pattern_id = PDAst.add_pattern(out, {:bind, processed})
     {[processed | binds], pattern_id}
+  end
+
+  def from_pattern({:=, _opts, [lhs, rhs]}, binds, scope, out) do
+    {binds, lhs_pat} = from_pattern(lhs, binds, scope, out)
+    {binds, rhs_pat} = from_pattern(rhs, binds, scope, out)
+    pattern_id = PDAst.add_pattern(out, {:union, lhs_pat, rhs_pat})
+    {binds, pattern_id}
+  end
+
+  def from_pattern({:%{}, _opts, fields}, binds, scope, out) when is_list(fields) do
+    {elems, binds} =
+      Enum.map_reduce(fields, binds, fn {key, value}, binds ->
+        {binds, pattern_id} = from_pattern(value, binds, scope, out)
+        {{key, pattern_id}, binds}
+      end)
+
+    pattern_id = PDAst.add_pattern(out, {:map, elems})
+    {binds, pattern_id}
   end
 
   def from_expr({:__block__, opts, body}, scope, out) do
@@ -288,18 +311,39 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
         {{:->, clause_opts, [[pattern], body]}, clause_idx}, case_expr ->
           location = make_location(clause_opts)
 
-          {binds_set, [pattern], scope} =
-            handle_patterns_scope(
-              [pattern],
-              expr_id,
-              clause_idx,
-              scope,
-              out
-            )
+          {binds_set, pattern, guard, scope} =
+            case pattern do
+              {:when, _opts, [pattern, guard]} ->
+                {binds_set, [pattern], scope} =
+                  handle_patterns_scope(
+                    [pattern],
+                    expr_id,
+                    clause_idx,
+                    scope,
+                    out
+                  )
+
+                # Scope from guard is not propagated.
+                {guard_expr, _scope} = from_expr(guard, scope, out)
+
+                {binds_set, pattern, guard_expr, scope}
+
+              pattern ->
+                {binds_set, [pattern], scope} =
+                  handle_patterns_scope(
+                    [pattern],
+                    expr_id,
+                    clause_idx,
+                    scope,
+                    out
+                  )
+
+                {binds_set, pattern, nil, scope}
+            end
 
           {body_expr, _scope} = from_expr(body, scope, out)
 
-          Expr.Case.add_clause(case_expr, pattern, binds_set, nil, body_expr, location)
+          Expr.Case.add_clause(case_expr, pattern, binds_set, guard, body_expr, location)
       end)
 
     case_expr = Expr.Case.finish(case_expr)
@@ -316,6 +360,24 @@ defmodule LiveData.Tracked.FlatAst.FromAst do
   end
 
   def from_expr({:<<>>, opts, elems}, scope, out) do
+    # Quick optimization pass to reduce AST size when used with some EEx engines.
+    # The LiveView tag parsing EEx engine tokenizes and emits each token as a
+    # separate binary. We do a quick pass here to recombine them.
+
+    # {:"::", [inferred_bitstring_spec: true, line: 14, column: 11],
+    #  ["foo", {:binary, [line: 14, column: 11], nil}]},
+
+    elems =
+      elems
+      |> Enum.reduce([], fn
+        {:"::", _, [bin2, {:binary, _, nil}]}, [{:"::", opts, [bin1, {:binary, spec_opts, nil}]} | tail] when is_binary(bin1) and is_binary(bin2) ->
+          [{:"::", opts, [bin1 <> bin2, {:binary, spec_opts, nil}]} | tail]
+
+        elem, acc ->
+          [elem | acc]
+      end)
+      |> Enum.reverse()
+
     {items, scope} =
       Enum.map_reduce(elems, scope, fn
         {:"::", _, [expr, specifiers]}, scope ->

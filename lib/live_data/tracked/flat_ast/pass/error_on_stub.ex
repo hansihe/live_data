@@ -15,6 +15,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.ErrorOnStub do
     keyed_lit = get_literal_or_nil(ast, :keyed_stub)
     tracked_lit = get_literal_or_nil(ast, :tracked_stub)
     lifecycle_hook_lit = get_literal_or_nil(ast, :lifecycle_hook_stub)
+    marker_stub_lit = get_literal_or_nil(ast, :marker_stub)
 
     Util.traverse(ast, ast.root, nil, fn
       # _id, %Expr.CallTracked{}
@@ -34,6 +35,9 @@ defmodule LiveData.Tracked.FlatAst.Pass.ErrorOnStub do
 
             ^lifecycle_hook_lit ->
               raise "unreachable"
+
+            ^marker_stub_lit ->
+              nil
           end
 
         raise %CompileError{

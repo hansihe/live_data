@@ -50,7 +50,7 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     {var_ast, gen}
   end
 
-  def to_expr_inner({:literal_value, literal}, _expr_id, gen, _ast, _scope_mode, _opts) do
+  def to_expr_inner({:literal_value, _, literal}, _expr_id, gen, _ast, _scope_mode, _opts) do
     {literal, gen}
   end
 
@@ -70,8 +70,12 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
             Map.put(gen, bind, data.variable)
           end)
 
-        # TODO handle guards
-        nil = clause.guard
+        {patterns_ast, gen} = if clause.guard == nil do
+          {patterns_ast, gen}
+        else
+          guard_ast = scope_to_guard_expr(clause.guard, gen, ast)
+          {{:when, [], [patterns_ast, guard_ast]}, gen}
+        end
 
         {body_ast, gen} = to_expr(clause.body, gen, ast, scope_mode, opts)
 
@@ -234,8 +238,12 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
             Map.put(gen, bind, data.variable)
           end)
 
-        # TODO handle guards
-        nil = clause.guard
+        {pattern_ast, gen} = if clause.guard == nil do
+          {pattern_ast, gen}
+        else
+          guard_ast = scope_to_guard_expr(clause.guard, gen, ast)
+          {{:when, [], [pattern_ast, guard_ast]}, gen}
+        end
 
         {body_ast, gen} = to_expr(clause.body, gen, ast, scope_mode, opts)
 
@@ -256,7 +264,7 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
         nil
 
       {:literal, _lit} = literal_id ->
-        {:literal_value, []} = FlatAst.get(ast, literal_id)
+        {:literal_value, _, []} = FlatAst.get(ast, literal_id)
     end
 
     {items, gen} =
@@ -437,11 +445,28 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     {{:{}, make_opts(), new_elems}, gen}
   end
 
+  def to_pattern_inner({:map, kvs}, _pattern_id, gen, ast, opts) do
+    {kvs_ast, gen} =
+      Enum.map_reduce(kvs, gen, fn
+        {key, value}, gen ->
+          {value_ast, gen} = to_pattern(value, gen, ast, opts)
+          {{key, value_ast}, gen}
+      end)
+
+    {{:%{}, make_opts(), kvs_ast}, gen}
+  end
+
+  def to_pattern_inner({:union, lhs, rhs}, _pattern_id, gen, ast, opts) do
+    {lhs_ast, gen} = to_pattern(lhs, gen, ast, opts)
+    {rhs_ast, gen} = to_pattern(rhs, gen, ast, opts)
+    {{:=, make_opts(), [lhs_ast, rhs_ast]}, gen}
+  end
+
   def to_pattern_inner({:bind, var}, _pattern_id, gen, _ast, _opts) do
     {var_to_expr(var, gen), gen}
   end
 
-  def to_pattern_inner({:atom, name}, _pattern_id, gen, _ast, _opts) do
+  def to_pattern_inner({:literal, name}, _pattern_id, gen, _ast, _opts) do
     {name, gen}
   end
 
@@ -487,5 +512,35 @@ defmodule LiveData.Tracked.FlatAst.ToAst do
     do: filter_non_return_literals(tail, acc)
 
   def filter_non_return_literals([val | tail], acc),
-    do: filter_non_return_literals(tail, [val, acc])
+    do: filter_non_return_literals(tail, [val | acc])
+
+  def scope_to_guard_expr(expr_id, gen, ast) do
+    %Expr.Scope{exprs: exprs} = FlatAst.get(ast, expr_id)
+    in_scope = MapSet.new(exprs)
+    return_expr = Enum.at(exprs, -1)
+    scope_to_guard_expr_rec(return_expr, in_scope, gen, ast)
+  end
+
+  def scope_to_guard_expr_rec(expr_id, in_scope, gen, ast) do
+    if MapSet.member?(in_scope, expr_id) do
+      case FlatAst.get(ast, expr_id) do
+        {:literal_value, _, literal} ->
+          literal
+
+        %Expr.CallMF{} = expr ->
+          module = scope_to_guard_expr_rec(expr.module, in_scope, gen, ast)
+          function = scope_to_guard_expr_rec(expr.function, in_scope, gen, ast)
+          args = Enum.map(expr.args, &scope_to_guard_expr_rec(&1, in_scope, gen, ast))
+          {{:., [], [module, function]}, [], args}
+
+        %Expr.Var{ref_expr: ref_expr, location: location} ->
+          var = Map.fetch!(gen, ref_expr)
+          ast_opts = make_opts(location: location)
+          var_to_expr(var, gen, ast_opts)
+      end
+    else
+      var = Map.fetch!(gen, expr_id)
+      var_to_expr(var, gen)
+    end
+  end
 end

@@ -81,31 +81,31 @@ defmodule LiveData.Tracked.FlatAst.Pass.Normalize do
     {expr.ref_expr, [expr_id], ast}
   end
 
-  def flatten_block_rec_inner({:literal_value, _lit}, lit_id, ast) do
+  def flatten_block_rec_inner({:literal_value, _lit_id, _lit}, lit_id, ast) do
     {lit_id, [lit_id], ast}
   end
 
   def flatten_block_rec_inner(expr, expr_id, ast) do
     {new_expr, {exprs, ast}} =
       FlatAst.Util.transform_expr(expr, {[], ast}, fn
-        :value, _selector, sub_expr_id, {acc, ast} ->
+        :value, _selector, sub_expr_id, _aux, {acc, ast} ->
           {val, items, ast} = flatten_block_rec(sub_expr_id, ast)
           {val, {[acc, items], ast}}
 
-        :scope, _selector, sub_expr_id, {acc, ast} ->
+        :scope, _selector, sub_expr_id, _aux, {acc, ast} ->
           {val, ast} = flatten_block(sub_expr_id, ast)
           {val, {acc, ast}}
 
-        :literal, _selector, lit_id, {acc, ast} ->
+        :literal, _selector, lit_id, _aux, {acc, ast} ->
           {lit_id, {acc, ast}}
 
-        :pattern, _selector, pat_id, {acc, ast} ->
+        :pattern, _selector, pat_id, _aux, {acc, ast} ->
           {pat_id, {acc, ast}}
 
-        :bind_ref, _ref, ref_id, {acc, ast} ->
+        :bind_ref, _ref, ref_id, _aux, {acc, ast} ->
           {ref_id, {acc, ast}}
 
-        :bind, _ref, ref_id, {acc, ast} ->
+        :bind, _ref, ref_id, _aux, {acc, ast} ->
           {ref_id, {acc, ast}}
       end)
 

@@ -20,7 +20,7 @@ defimpl Expr, for: Expr.Intrinsic do
   def transform(%Expr.Intrinsic{} = expr, acc, fun) do
     {new_args, acc} =
       Enum.reduce(Enum.with_index(expr.args), {[], acc}, fn {arg, index}, {list, acc} ->
-        {new, acc} = fun.(:value, {:arg, index}, arg, acc)
+        {new, acc} = fun.(:value, {:arg, index}, arg, nil, acc)
         {[new | list], acc}
       end)
 

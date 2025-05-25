@@ -18,8 +18,8 @@ end
 
 defimpl Expr, for: Expr.MakeCons do
   def transform(%Expr.MakeCons{} = expr, acc, fun) do
-    {new_head, acc} = fun.(:value, :head, expr.head, acc)
-    {new_tail, acc} = fun.(:value, :tail, expr.tail, acc)
+    {new_head, acc} = fun.(:value, :head, expr.head, nil, acc)
+    {new_tail, acc} = fun.(:value, :tail, expr.tail, nil, acc)
 
     new_expr = %{expr | head: new_head, tail: new_tail}
     {new_expr, acc}

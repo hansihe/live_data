@@ -1,7 +1,45 @@
 ExUnit.start()
 
+:erlang.system_flag(:backtrace_depth, 20)
+
+defmodule LiveData.Tracked.SmartEngineWrapper do
+  def handle_begin(state), do: EEx.SmartEngine.handle_begin(state)
+  def handle_body(state, _opts \\ []) do
+    body_ast = EEx.SmartEngine.handle_body(state)
+    #quote do
+    #  unquote(body_ast)
+    #  #LiveData.Tracked.Dummy.marker_stub(:html, outer_body)
+    #end
+    body_ast
+  end
+  def handle_end(state), do: EEx.SmartEngine.handle_end(state)
+  def handle_expr(state, marker, expr), do: EEx.SmartEngine.handle_expr(state, marker, expr)
+  def handle_text(state, list, text), do: EEx.SmartEngine.handle_text(state, list, text)
+  def init(opts), do: EEx.SmartEngine.init(opts)
+end
+
 defmodule LiveData.Tracked.TestHelpers do
   alias LiveData.Tracked.TraceCollector
+
+  defmacro sigil_H({:<<>>, meta, [expr]}, modifiers)
+           when modifiers == [] or modifiers == ~c"noformat" do
+    if not Macro.Env.has_var?(__CALLER__, {:assigns, nil}) do
+      raise "~H requires a variable named \"assigns\" to exist and be set to a map"
+    end
+
+    options = [
+      engine: Phoenix.LiveView.TagEngine,
+      subengine: LiveData.Tracked.SmartEngineWrapper,
+      file: __CALLER__.file,
+      line: __CALLER__.line + 1,
+      caller: __CALLER__,
+      indentation: meta[:indentation] || 0,
+      source: expr,
+      tag_handler: Phoenix.LiveView.HTMLEngine
+    ]
+
+    EEx.compile_string(expr, options)
+  end
 
   def define_module_ast!(ast, opts, print_trace \\ false) do
     unique_id = :erlang.unique_integer([:positive])

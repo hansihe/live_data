@@ -21,14 +21,14 @@ defimpl Expr, for: Expr.MakeMap do
   def transform(%Expr.MakeMap{} = expr, acc, fun) do
     {new_struct, acc} =
       if expr.struct do
-        fun.(:value, :struct, expr.struct, acc)
+        fun.(:value, :struct, expr.struct, nil, acc)
       else
         {nil, acc}
       end
 
     {new_prev, acc} =
       if expr.prev do
-        fun.(:value, :prev, expr.prev, acc)
+        fun.(:value, :prev, expr.prev, nil, acc)
       else
         {nil, acc}
       end
@@ -37,8 +37,8 @@ defimpl Expr, for: Expr.MakeMap do
       expr.kvs
       |> Enum.with_index()
       |> Enum.map_reduce(acc, fn {{key, val}, idx}, acc ->
-        {new_key, acc} = fun.(:value, {idx, :key}, key, acc)
-        {new_val, acc} = fun.(:value, {idx, :val}, val, acc)
+        {new_key, acc} = fun.(:value, {idx, :key}, key, nil, acc)
+        {new_val, acc} = fun.(:value, {idx, :val}, val, nil, acc)
         {{new_key, new_val}, acc}
       end)
 

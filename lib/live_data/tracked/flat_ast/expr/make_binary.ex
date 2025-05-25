@@ -22,7 +22,7 @@ defimpl Expr, for: Expr.MakeBinary do
       expr.components
       |> Enum.with_index()
       |> Enum.map_reduce(acc, fn {{elem, specifiers}, idx}, acc ->
-        {new_elem, acc} = fun.(:value, idx, elem, acc)
+        {new_elem, acc} = fun.(:value, idx, elem, nil, acc)
         {{new_elem, specifiers}, acc}
       end)
 

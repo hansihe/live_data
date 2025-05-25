@@ -14,13 +14,13 @@ end
 
 defimpl Expr, for: Expr.CallValue do
   def transform(%Expr.CallValue{} = expr, acc, fun) do
-    {new_value, acc} = fun.(:value, :fun, expr.value, acc)
+    {new_value, acc} = fun.(:value, :fun, expr.value, nil, acc)
 
     {new_args, acc} =
       expr.args
       |> Enum.with_index()
       |> Enum.map_reduce(acc, fn {arg, idx}, acc ->
-        fun.(:value, {:arg, idx}, arg, acc)
+        fun.(:value, {:arg, idx}, arg, nil, acc)
       end)
 
     new_expr = %{

@@ -50,18 +50,21 @@ defmodule LiveData.Tracked.Compiler do
     meta_fun_name = String.to_atom("__tracked_meta__#{name}__#{arity}__")
     tracked_fun_name = String.to_atom("__tracked__#{name}__")
 
-    # if LiveData.debug_prints?(), do: IO.inspect(clauses, label: :elixir_ast_clauses, limit: :infinity)
     TraceCollector.log(:elixir_ast_clauses, clauses)
 
     {:ok, ast} = FlatAst.FromAst.from_clauses(clauses)
     TraceCollector.log(:base_flat_ast, ast)
-    {:ok, ast} = FlatAst.Pass.PromoteTracked.promote_tracked(ast)
-    ast = FlatAst.Pass.Normalize.normalize(ast)
+    FlatAst.Pass.Validate.validate(ast)
 
-    # if LiveData.debug_prints?(), do: IO.inspect(ast, label: :normalized_flat_ast, limit: :infinity)
+    {:ok, ast} = FlatAst.Pass.PromoteTracked.promote_tracked(ast)
+    FlatAst.Pass.Validate.validate(ast)
+
+    ast = FlatAst.Pass.Normalize.normalize(ast)
     TraceCollector.log(:normalized_flat_ast, ast)
+    FlatAst.Pass.Validate.validate(ast)
 
     nesting = FlatAst.Pass.CalculateNesting.calculate_nesting(ast)
+    FlatAst.Pass.Validate.validate(ast)
 
     # TODO we might not want to do it this way
     # This generates m*n entries where m is the number of expressions and n
@@ -83,12 +86,13 @@ defmodule LiveData.Tracked.Compiler do
       )
 
     TraceCollector.log(:final_flat_ast, new_ast)
+    FlatAst.Pass.Validate.validate(new_ast)
 
     :ok = FlatAst.Pass.ErrorOnStub.error_on_stub(new_ast, file)
 
     expr = FlatAst.ToAst.to_expr(new_ast, pretty: true)
     tracked_defs = Util.fn_to_defs(expr, tracked_fun_name)
-    # if LiveData.debug_prints?(), do: IO.puts(Macro.to_string(tracked_defs))
+    TraceCollector.log(:final_tracked_defs_ast, tracked_defs)
     TraceCollector.log(:tracked_defs, Macro.to_string(tracked_defs))
 
     meta_fun_ast =
@@ -96,7 +100,6 @@ defmodule LiveData.Tracked.Compiler do
         def unquote(meta_fun_name)(:statics), do: unquote(Macro.escape(statics))
       end
 
-    # if LiveData.debug_prints?(), do: IO.puts(Macro.to_string(meta_fun_ast))
     TraceCollector.log(:meta_defs, Macro.to_string(meta_fun_ast))
 
     [

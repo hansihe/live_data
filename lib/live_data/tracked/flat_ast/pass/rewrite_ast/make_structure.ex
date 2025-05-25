@@ -113,7 +113,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
 
   def rewrite_make_structure_rec(%Expr.CallMF{} = expr, expr_id, file, ast, static_id, state) do
     case {FlatAst.get(ast, expr.module), FlatAst.get(ast, expr.function)} do
-      {{:literal_value, LiveData.Tracked.Dummy}, {:literal_value, :keyed_stub}} ->
+      {{:literal_value, _, LiveData.Tracked.Dummy}, {:literal_value, _, :keyed_stub}} ->
         [key_expr, value_expr] = expr.args
 
         :ok = StaticsAgent.add_dependencies(state, ast, [key_expr])
@@ -121,16 +121,16 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
 
         rewrite_make_structure_rec(value_expr, file, ast, static_id, state)
 
-      {{:literal_value, LiveData.Tracked.Dummy}, {:literal_value, :track_stub}} ->
+      {{:literal_value, _, LiveData.Tracked.Dummy}, {:literal_value, _, :track_stub}} ->
         # This case should have been rewritten to `Expr.CallTracked` in a previous pass.
         raise "unreachable"
 
-      {{:literal_value, LiveData.Tracked.Dummy}, {:literal_value, :custom_fragment_stub}} ->
+      {{:literal_value, _, LiveData.Tracked.Dummy}, {:literal_value, _, :custom_fragment_stub}} ->
         [_custom_fragment_id] = expr.args
         # TODO: Reference the custom fragment
         throw("todo")
 
-      {{:literal_value, LiveData.Tracked.Dummy}, {:literal_value, :lifecycle_hook_stub}} ->
+      {{:literal_value, _, LiveData.Tracked.Dummy}, {:literal_value, _, :lifecycle_hook_stub}} ->
         [_hook_module, _subtrees] = expr.args
         # TODO: Reference the hook
         throw("todo")
@@ -221,7 +221,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.MakeStructure do
     {:to_string, rewrite_make_structure_rec(inner, file, ast, static_id, state)}
   end
 
-  def rewrite_make_structure_rec({:literal_value, lit}, _expr_id, _file, _ast, _static_id, _state) do
+  def rewrite_make_structure_rec({:literal_value, _, lit}, _expr_id, _file, _ast, _static_id, _state) do
     {:literal, lit}
   end
 

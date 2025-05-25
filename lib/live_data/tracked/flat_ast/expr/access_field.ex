@@ -18,7 +18,7 @@ end
 
 defimpl Expr, for: Expr.AccessField do
   def transform(%Expr.AccessField{} = expr, acc, fun) do
-    {new_top, acc} = fun.(:value, :top, expr.top, acc)
+    {new_top, acc} = fun.(:value, :top, expr.top, nil, acc)
     new_expr = %{expr | top: new_top}
     {new_expr, acc}
   end

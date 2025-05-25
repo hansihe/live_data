@@ -34,22 +34,22 @@ defmodule LiveData.Tracked.FlatAst.Pass.CalculateNesting do
 
   def calculate_nesting_rec(expr, _expr_id, scoped_mode, path, acc, ast) do
     FlatAst.Util.reduce_expr(expr, acc, fn
-      :scope, _selector, expr, acc ->
+      :scope, _selector, expr, _aux, acc ->
         calculate_nesting_rec(expr, scoped_mode, path, acc, ast)
 
-      :value, _selector, expr, acc ->
+      :value, _selector, expr, _aux, acc ->
         calculate_nesting_rec(expr, scoped_mode, path, acc, ast)
 
-      :literal, _, _, acc ->
+      :literal, _, _, _, acc ->
         acc
 
-      :bind, _, _, acc ->
+      :bind, _, _, _, acc ->
         acc
 
-      :bind_ref, _, _, acc ->
+      :bind_ref, _, _, _, acc ->
         acc
 
-      :pattern, _, _, acc ->
+      :pattern, _, _, _, acc ->
         acc
     end)
   end

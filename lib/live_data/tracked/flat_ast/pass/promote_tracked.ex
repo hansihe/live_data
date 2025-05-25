@@ -44,7 +44,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.PromoteTracked do
           # TODO report errors
           # TODO validate subtrees argument
 
-          {:literal_value, module_lit} = FlatAst.get(ast, module)
+          {:literal_value, _lit_id, module_lit} = FlatAst.get(ast, module)
           true = is_atom(module_lit)
 
           args_list = collect_static_list(args, ast)
@@ -74,7 +74,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.PromoteTracked do
       %LiveData.Tracked.FlatAst.Expr.MakeCons{head: head, tail: tail} ->
         collect_static_list(tail, ast, [head | acc])
 
-      {:literal_value, []} ->
+      {:literal_value, _lit_id, []} ->
         Enum.reverse(acc)
 
         # TODO handle other

@@ -35,21 +35,32 @@ defmodule LiveData.Tracked.FlatAst.Util do
 
   User provided function will be called on a node before its children.
   """
-  def traverse(ast, id, expr \\ nil, acc, fun)
-
-  def traverse(ast, id, nil, acc, fun) do
-    expr = FlatAst.get(ast, id)
-    traverse(ast, id, expr, acc, fun)
+  def traverse(ast, id, acc, fun) do
+    traverse_inner(ast, id, nil, acc, fun)
   end
 
-  def traverse(ast, id, expr, acc, fun) do
+  defp traverse_inner(ast, id, nil, acc, fun) do
+    expr = FlatAst.get(ast, id)
+    traverse_inner(ast, id, expr, acc, fun)
+  end
+
+  defp traverse_inner(ast, id, expr, acc, fun) do
     case fun.(id, expr, acc) do
       {:handled, acc} ->
         acc
 
       {:continue, acc} ->
-        children = child_exprs(expr)
-        Enum.reduce(children, acc, fn child, acc -> traverse(ast, child, acc, fun) end)
+        case id do
+          {:literal, _lid} ->
+            acc
+
+          {:bind, _bid} ->
+            acc
+
+          {:expr, _eid} ->
+            children = child_exprs(expr)
+            Enum.reduce(children, acc, fn child, acc -> traverse(ast, child, acc, fun) end)
+        end
     end
   end
 
@@ -62,7 +73,7 @@ defmodule LiveData.Tracked.FlatAst.Util do
 
   def traverse_post(ast, id, nil, acc, fun) do
     expr = FlatAst.get(ast, id)
-    traverse(ast, id, expr, acc, fun)
+    traverse_post(ast, id, expr, acc, fun)
   end
 
   def traverse_post(ast, id, expr, acc, fun) do
@@ -88,18 +99,18 @@ defmodule LiveData.Tracked.FlatAst.Util do
   end
 
   def transform_expr({:bind, _bid} = bind, acc, fun) do
-    fun.(:bind, nil, bind, acc)
+    fun.(:bind, nil, bind, nil, acc)
   end
 
-  def transform_expr({:literal_value, _lid} = literal_id, acc, fun) do
-    fun.(:literal, nil, literal_id, acc)
+  def transform_expr({:literal_value, literal_id, _value}, acc, fun) do
+    fun.(:literal, nil, literal_id, nil, acc)
   end
 
   def reduce_expr(expr, acc, fun) do
     {_new_expr, acc} =
       transform_expr(expr, acc, fn
-        kind, selector, value, acc ->
-          acc = fun.(kind, selector, value, acc)
+        kind, selector, value, aux, acc ->
+          acc = fun.(kind, selector, value, aux, acc)
           {value, acc}
       end)
 
@@ -111,13 +122,22 @@ defmodule LiveData.Tracked.FlatAst.Util do
   """
   def child_exprs(expr) do
     reduce_expr(expr, [], fn
-      :value, _selector, child_expr_id, acc ->
+      :value, _selector, child_expr_id, _aux, acc ->
         [child_expr_id | acc]
 
-      :scope, _selector, child_expr_id, acc ->
+      :scope, _selector, child_expr_id, _aux, acc ->
         [child_expr_id | acc]
 
-      _, _, _, acc ->
+      :pattern, _selector, {_pattern_id, _binds}, _aux, acc ->
+        acc
+
+      :bind, _selector, _child_bind_id, _aux, acc ->
+        acc
+
+      :literal, _selector, _literal_id, _aux, acc ->
+        acc
+
+      :bind_ref, _selector, _bind_id, _aux, acc ->
         acc
     end)
     |> Enum.reverse()

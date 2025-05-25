@@ -19,7 +19,7 @@ defimpl Expr, for: Expr.MakeTuple do
       expr.elements
       |> Enum.with_index()
       |> Enum.map_reduce(acc, fn {elem, idx}, acc ->
-        fun.(:value, idx, elem, acc)
+        fun.(:value, idx, elem, nil, acc)
       end)
 
     new_expr = %{expr | elements: new_elems}

@@ -158,7 +158,7 @@ alias LiveData.Tracked.FlatAst.Expr
   end
 
   def get(ast, {:literal, _lid} = id) do
-    {:literal_value, Map.fetch!(ast.literals, id)}
+    {:literal_value, id, Map.fetch!(ast.literals, id)}
   end
 
   def get(_ast, {:bind, _bid} = id) do

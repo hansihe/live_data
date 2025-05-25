@@ -33,42 +33,42 @@ defimpl Expr, for: Expr.For do
       |> Enum.with_index()
       |> Enum.map_reduce(acc, fn
         {{:loop, pattern, binds, body}, idx}, acc ->
-          {new_pattern, acc} = fun.(:pattern, {idx, :pattern}, pattern, acc)
+          {new_pattern, acc} = fun.(:pattern, {idx, :pattern}, pattern, nil, acc)
 
           {new_binds, acc} =
             Enum.reduce(binds, {[], acc}, fn bind, {list, acc} ->
-              {new, acc} = fun.(:bind, {idx, :pattern}, bind, acc)
+              {new, acc} = fun.(:bind, {idx, :pattern}, bind, nil, acc)
               {[new | list], acc}
             end)
 
-          {new_body, acc} = fun.(:scope, {idx, :generator}, body, acc)
+          {new_body, acc} = fun.(:scope, {idx, :generator}, body, nil, acc)
           {{:loop, new_pattern, MapSet.new(new_binds), new_body}, acc}
 
         {{:bitstring_loop, pattern, binds, body}, idx}, acc ->
-          {new_pattern, acc} = fun.(:pattern, {idx, :pattern}, pattern, acc)
+          {new_pattern, acc} = fun.(:pattern, {idx, :pattern}, pattern, binds, acc)
 
           {new_binds, acc} =
             Enum.reduce(binds, {[], acc}, fn bind, {list, acc} ->
-              {new, acc} = fun.(:bind, {idx, :pattern}, bind, acc)
+              {new, acc} = fun.(:bind, {idx, :pattern}, bind, nil, acc)
               {[new | list], acc}
             end)
 
-          {new_body, acc} = fun.(:scope, {idx, :generator}, body, acc)
+          {new_body, acc} = fun.(:scope, {idx, :generator}, body, nil, acc)
           {{:bitstring_loop, new_pattern, MapSet.new(new_binds), new_body}, acc}
 
         {{:filter, body}, idx}, acc ->
-          {new_body, acc} = fun.(:scope, {idx, :filter}, body, acc)
+          {new_body, acc} = fun.(:scope, {idx, :filter}, body, nil, acc)
           {{:filter, new_body}, acc}
       end)
 
     {new_into, acc} =
       if expr.into do
-        fun.(:value, :into, expr.into, acc)
+        fun.(:value, :into, expr.into, nil, acc)
       else
         {nil, acc}
       end
 
-    {new_inner, acc} = fun.(:scope, :inner, expr.inner, acc)
+    {new_inner, acc} = fun.(:scope, :inner, expr.inner, nil, acc)
 
     new_expr = %{
       expr

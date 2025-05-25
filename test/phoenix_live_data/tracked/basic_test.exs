@@ -186,6 +186,17 @@ defmodule LiveData.Tracked.BasicTest do
            )
   end
 
+  test "eex like" do
+    _module = define_module! do
+      use LiveData.Tracked
+
+      deft foo(assigns) do
+        arg0 = String.Chars.to_string(EEx.Engine.fetch_assign!(assigns, :world))
+        <<"<div", ">", "\n  ", "<p", ">", "Hello ", arg0::binary, "!", "</p>", "\n", "</div>">>
+      end
+    end
+  end
+
   #test "lifecycle hook works in root fragment" do
   # module = define_module! do
   #   use LiveData.Tracked

@@ -43,24 +43,30 @@ end
 
 defimpl Expr, for: Expr.Case do
   def transform(%Expr.Case{} = expr, acc, fun) do
-    {new_value, acc} = fun.(:value, :value, expr.value, acc)
+    {new_value, acc} = fun.(:value, :value, expr.value, nil, acc)
 
     {clauses, acc} =
       expr.clauses
       |> Enum.with_index()
       |> Enum.map_reduce(acc, fn
         {%Expr.Case.Clause{} = clause, idx}, acc ->
-          {{new_pattern, new_binds}, acc} =
-            fun.(:pattern, {idx, :pattern}, {clause.pattern, clause.binds}, acc)
+          {new_pattern, acc} =
+            fun.(:pattern, {idx, :pattern}, clause.pattern, clause.binds, acc)
+
+          {new_binds, acc} =
+            Enum.reduce(clause.binds, {[], acc}, fn bind, {list, acc} ->
+              {new, acc} = fun.(:bind, nil, bind, nil, acc)
+              {[new | list], acc}
+            end)
 
           {new_guard, acc} =
             if clause.guard do
-              fun.(:scope, {idx, :guard}, clause.guard, acc)
+              fun.(:scope, {idx, :guard}, clause.guard, nil, acc)
             else
               {nil, acc}
             end
 
-          {new_body, acc} = fun.(:scope, {idx, :body}, clause.body, acc)
+          {new_body, acc} = fun.(:scope, {idx, :body}, clause.body, nil, acc)
 
           {%{clause | pattern: new_pattern, binds: new_binds, guard: new_guard, body: new_body},
            acc}

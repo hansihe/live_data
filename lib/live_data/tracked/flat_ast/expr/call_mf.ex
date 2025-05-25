@@ -23,18 +23,18 @@ defimpl Expr, for: Expr.CallMF do
   def transform(%Expr.CallMF{} = expr, acc, fun) do
     {new_module, acc} =
       if expr.module do
-        fun.(:value, :mod, expr.module, acc)
+        fun.(:value, :mod, expr.module, nil, acc)
       else
         {nil, acc}
       end
 
-    {new_function, acc} = fun.(:value, :fun, expr.function, acc)
+    {new_function, acc} = fun.(:value, :fun, expr.function, nil, acc)
 
     {new_args, acc} =
       expr.args
       |> Enum.with_index()
       |> Enum.map_reduce(acc, fn {arg, idx}, acc ->
-        fun.(:value, {:arg, idx}, arg, acc)
+        fun.(:value, {:arg, idx}, arg, nil, acc)
       end)
 
     new_expr = %{

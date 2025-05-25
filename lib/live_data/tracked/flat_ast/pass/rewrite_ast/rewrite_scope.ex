@@ -93,7 +93,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
     rewritten = Map.put(rewritten, expr_id, new_expr_id)
 
     {new_expr, rewritten} =
-      Util.transform_expr(expr, rewritten, fn kind, selector, inner, rewritten ->
+      Util.transform_expr(expr, rewritten, fn kind, selector, inner, _aux, rewritten ->
         case {expr, kind, selector} do
           {%Expr.For{}, :scope, :inner} ->
             {new_inner, _rewritten} = rewrite_scope(inner, data, rewritten, transcribed, out)
@@ -101,6 +101,18 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
 
           {%Expr.Case{}, :scope, {_idx, :body}} ->
             {new_inner, _rewritten} = rewrite_scope(inner, data, rewritten, transcribed, out)
+            {new_inner, rewritten}
+
+          {%Expr.Case{}, :scope, {_idx, :guard}} ->
+            {new_inner, _transcribed} =
+              Util.Transcribe.transcribe(
+                inner,
+                data,
+                transcribed,
+                &Map.fetch!(rewritten, &1),
+                out
+              )
+
             {new_inner, rewritten}
 
           {_, :scope, _} ->
@@ -152,7 +164,7 @@ defmodule LiveData.Tracked.FlatAst.Pass.RewriteAst.RewriteScope do
   end
 
   def rewrite_resolve({:literal, _lit_id} = literal_id, data, _rewritten, _transcribed, out) do
-    {:literal_value, literal} = FlatAst.get(data.ast, literal_id)
+    {:literal_value, _, literal} = FlatAst.get(data.ast, literal_id)
     PDAst.add_literal(out, literal)
   end
 end

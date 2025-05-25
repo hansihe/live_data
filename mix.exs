@@ -32,7 +32,8 @@ defmodule LiveData.MixProject do
     [
       {:phoenix, "~> 1.7"},
       {:jason, "~> 1.4"},
-      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
+      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
+      {:phoenix_live_view, "~> 1.0", only: :test}
     ]
   end
 

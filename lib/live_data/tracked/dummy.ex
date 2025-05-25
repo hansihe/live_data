@@ -60,6 +60,10 @@ defmodule LiveData.Tracked.Dummy do
   end
 
   @doc false
+  def marker_stub(:html, expr), do: expr
+  def marker_stub(:data, expr), do: expr
+
+  @doc false
   def keyed_stub(_key, _expr) do
     raise "unreachable"
   end

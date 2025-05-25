@@ -17,12 +17,12 @@ end
 
 defimpl Expr, for: Expr.Match do
   def transform(%Expr.Match{} = expr, acc, fun) do
-    {new_pattern, acc} = fun.(:pattern, :lhs, expr.pattern, acc)
-    {new_rhs, acc} = fun.(:value, :rhs, expr.rhs, acc)
+    {new_pattern, acc} = fun.(:pattern, :lhs, expr.pattern, expr.binds, acc)
+    {new_rhs, acc} = fun.(:value, :rhs, expr.rhs, nil, acc)
 
     {new_binds, acc} =
       Enum.reduce(expr.binds, {[], acc}, fn bind, {list, acc} ->
-        {new, acc} = fun.(:bind, nil, bind, acc)
+        {new, acc} = fun.(:bind, nil, bind, nil, acc)
         {[new | list], acc}
       end)
 

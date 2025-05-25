@@ -22,7 +22,7 @@ defimpl Expr, for: Expr.MakeStatic do
       expr.slots
       |> Enum.with_index()
       |> Enum.map_reduce(acc, fn {elem, idx}, acc ->
-        fun.(:value, idx, elem, acc)
+        fun.(:value, idx, elem, nil, acc)
       end)
 
     new_expr = %{expr | slots: new_slots}

@@ -2,6 +2,20 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
   use ExUnit.Case
   import LiveData.Tracked.TestHelpers
 
+  alias LiveData.Tracked.FragmentTree
+
+  test "issue 1" do
+    _module =
+      define_module! do
+        use LiveData.Tracked
+
+        deft testing(assigns) do
+          a = String.Chars.to_string(assigns.world)
+          <<a::binary>>
+        end
+      end
+  end
+
   describe "maps" do
     test "in deft" do
       module =
@@ -45,6 +59,26 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
           end
         end
     end
+
+    test "in pattern" do
+      module =
+        define_module! do
+          use LiveData.Tracked
+
+          deft testing(v) do
+            case v do
+              %{1 => 1} -> :a
+              _ -> :b
+            end
+          end
+        end
+
+      ret = module.__tracked__testing__(%{1 => 1})
+      assert ret.template == {:literal, :a}
+
+      ret = module.__tracked__testing__(123)
+      assert ret.template == {:literal, :b}
+    end
   end
 
   describe "string construction" do
@@ -61,8 +95,7 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
       value = module.__tracked__testing__("world")
 
       assert value.template ==
-               {:make_binary,
-                [{:literal, "hello "}, %LiveData.Tracked.FragmentTree.Slot{num: 0}]}
+               {:make_binary, [{:literal, "hello "}, %LiveData.Tracked.FragmentTree.Slot{num: 0}]}
 
       assert value.slots == ["world"]
     end
@@ -192,6 +225,50 @@ defmodule LiveData.Tracked.LanguageFeatureTest do
                {:make_tuple, [{:literal, :bar}, %LiveData.Tracked.FragmentTree.Slot{num: 0}]}
 
       assert ret.slots == [6]
+    end
+
+    test "in case" do
+      module =
+        define_module! do
+          use LiveData.Tracked
+
+          deft testing(a) do
+            case a do
+              1 -> {:a, a}
+              2 -> {:b, a}
+            end
+          end
+        end
+
+      ret = module.__tracked__testing__(1)
+      assert ret.template == {:make_tuple, [{:literal, :a}, %LiveData.Tracked.FragmentTree.Slot{num: 0}]}
+      assert ret.slots == [1]
+
+      ret = module.__tracked__testing__(2)
+      assert ret.template == {:make_tuple, [{:literal, :b}, %LiveData.Tracked.FragmentTree.Slot{num: 0}]}
+      assert ret.slots == [2]
+    end
+
+    test "in case with guards" do
+      module =
+        define_module! do
+          use LiveData.Tracked
+
+          deft testing(a) do
+            case a do
+              {v1, v2} when is_integer(v1) and is_boolean(v2) and is_tuple(a) -> {v1, v2}
+              _ -> nil
+            end
+          end
+        end
+
+      ret = module.__tracked__testing__({1, true})
+      assert ret.template == {:make_tuple, [%FragmentTree.Slot{num: 0}, %FragmentTree.Slot{num: 1}]}
+      assert ret.slots == [1, true]
+
+      ret = module.__tracked__testing__(:asdf)
+      assert ret.template == {:literal, nil}
+      assert ret.slots == []
     end
   end
 

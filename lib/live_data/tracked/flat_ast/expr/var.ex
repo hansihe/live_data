@@ -18,7 +18,7 @@ defimpl Expr, for: Expr.Var do
     {new_ref_expr, acc} =
       case expr.ref_expr do
         {:bind, _bid} = bind ->
-          fun.(:bind_ref, nil, bind, acc)
+          fun.(:bind_ref, nil, bind, nil, acc)
       end
 
     new_expr = %{expr | ref_expr: new_ref_expr}

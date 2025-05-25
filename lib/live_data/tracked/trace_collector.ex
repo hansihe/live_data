@@ -77,6 +77,13 @@ defmodule LiveData.Tracked.TraceCollector do
     GenServer.call(__MODULE__, {:get_trace, mfa})
   end
 
+  def is_started? do
+    case GenServer.whereis(__MODULE__) do
+      nil -> false
+      _ -> true
+    end
+  end
+
   defstruct selectors: %{},
             traces: %{}
 

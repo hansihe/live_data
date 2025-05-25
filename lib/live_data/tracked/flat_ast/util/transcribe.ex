@@ -19,7 +19,7 @@ defmodule LiveData.Tracked.FlatAst.Util.Transcribe do
   map of parent transcribed expressions.
   """
   def transcribe({:literal, _} = lit_id, data, map, _backup_resolve, out) do
-    {:literal_value, lit} = FlatAst.get(data.ast, lit_id)
+    {:literal_value, _id, lit} = FlatAst.get(data.ast, lit_id)
     new_lit_id = PDAst.add_literal(out, lit)
     {new_lit_id, map}
   end
@@ -56,27 +56,27 @@ defmodule LiveData.Tracked.FlatAst.Util.Transcribe do
 
     {new_expr, map} =
       Util.transform_expr(expr, map, fn
-        :value, _selector, inner_expr_id, map ->
+        :value, _selector, inner_expr_id, _aux, map ->
           new_expr_id = transcribe_maybe_scope(inner_expr_id, data, map, backup_resolve, out)
           {new_expr_id, map}
 
-        :scope, _selector, inner_expr_id, map ->
+        :scope, _selector, inner_expr_id, _aux, map ->
           new_expr_id = transcribe_maybe_scope(inner_expr_id, data, map, backup_resolve, out)
           {new_expr_id, map}
 
-        :pattern, _selector, pattern, map ->
+        :pattern, _selector, pattern, _aux, map ->
           {pattern, map}
 
-        :literal, _selector, literal, map ->
-          {:literal_value, lit} = FlatAst.get(data.ast, literal)
+        :literal, _selector, literal, _aux, map ->
+          {:literal_value, _, lit} = FlatAst.get(data.ast, literal)
           new_lit_id = PDAst.add_literal(out, lit)
           {new_lit_id, map}
 
-        :bind, _selector, {:bind, _bid} = bind, map ->
+        :bind, _selector, {:bind, _bid} = bind, _aux, map ->
           new_ref = transcribe_bind(bind, map, backup_resolve, data, out)
           {new_ref, map}
 
-        :bind_ref, _selector, {:bind, _bid} = bind, map ->
+        :bind_ref, _selector, {:bind, _bid} = bind, _aux, map ->
           new_ref = transcribe_bind(bind, map, backup_resolve, data, out)
           {new_ref, map}
       end)
@@ -95,7 +95,7 @@ defmodule LiveData.Tracked.FlatAst.Util.Transcribe do
       {:bind, _bid} = bind ->
         transcribe_bind(bind, map, backup_resolve, data, out)
 
-      {:literal_value, lit} ->
+      {:literal_value, _, lit} ->
         PDAst.add_literal(out, lit)
 
       _ ->
